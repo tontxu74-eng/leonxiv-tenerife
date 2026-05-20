@@ -1,3 +1,6 @@
+# Claude Code
+.claude/
+
 # Logs de Firebase
 firebase-debug.log
 firebase-debug.*.log
