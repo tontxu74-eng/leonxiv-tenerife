@@ -1191,7 +1191,7 @@ window.saveTeam = function() {
     const col = appState.db.collection('equipos');
     let promise;
     if (id) {
-      promise = col.doc(id).update(teamData);
+      promise = col.doc(id).set(teamData);
     } else {
       promise = col.add(teamData);
     }
@@ -1257,7 +1257,7 @@ window.saveEvent = function() {
     const col = appState.db.collection('eventos');
     let promise;
     if (id) {
-      promise = col.doc(id).update(eventData);
+      promise = col.doc(id).set(eventData);
     } else {
       promise = col.add(eventData);
     }
@@ -1321,7 +1321,7 @@ window.saveContact = function() {
     const col = appState.db.collection('contactos');
     let promise;
     if (id) {
-      promise = col.doc(id).update(contactData);
+      promise = col.doc(id).set(contactData);
     } else {
       promise = col.add(contactData);
     }
@@ -1542,7 +1542,7 @@ window.saveLocation = function() {
 
   if (appState.firebaseEnabled) {
     const col = appState.db.collection('ubicaciones');
-    const promise = id ? col.doc(id).update(locData) : col.add(locData);
+    const promise = id ? col.doc(id).set(locData) : col.add(locData);
     promise.then(() => {
       showToast("Ubicación guardada en la nube", "success");
       closeModal('modal-location');
@@ -1614,7 +1614,7 @@ window.saveRoute = function() {
 
   if (appState.firebaseEnabled) {
     const col = appState.db.collection('itinerarios');
-    const promise = id ? col.doc(id).update(routeData) : col.add(routeData);
+    const promise = id ? col.doc(id).set(routeData) : col.add(routeData);
     promise.then(() => {
       showToast("Itinerario guardado en la nube", "success");
       closeModal('modal-route');
