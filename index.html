@@ -681,6 +681,12 @@
     </div>
   </div>
 
+  <!-- Banner de actualización disponible -->
+  <div id="update-banner" style="display:none; position:fixed; bottom:75px; left:50%; transform:translateX(-50%); z-index:4000; background:hsl(var(--bg-dark)); border:1px solid hsl(var(--police-blue)); border-radius:12px; padding:12px 20px; align-items:center; gap:14px; box-shadow:0 8px 30px rgba(0,0,0,0.7); font-size:0.85rem; white-space:nowrap;">
+    <span>🔄 Nueva versión disponible</span>
+    <button class="btn btn-sm" onclick="aplicarActualizacion()">Actualizar ahora</button>
+  </div>
+
   <!-- Banner flotante para selección de posición de equipo -->
   <div id="team-pick-banner" style="display:none; position:fixed; bottom:75px; left:50%; transform:translateX(-50%); z-index:3000; background:hsl(var(--bg-dark)); border:1px solid hsl(var(--gold-papal)); border-radius:12px; padding:12px 20px; align-items:center; gap:14px; box-shadow:0 8px 30px rgba(0,0,0,0.6); font-size:0.85rem; white-space:nowrap;">
     <span>📍 Haz clic en el mapa para fijar la posición del equipo</span>

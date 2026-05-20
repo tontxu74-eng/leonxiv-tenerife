@@ -86,16 +86,43 @@ function initApp() {
 }
 
 function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-      .then((reg) => {
-        console.log('[PWA] Service Worker registrado correctamente:', reg.scope);
-      })
-      .catch((err) => {
-        console.warn('[PWA] Fallo al registrar el Service Worker:', err);
+  if (!('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    console.log('[PWA] Service Worker registrado:', reg.scope);
+
+    const mostrarBanner = () => {
+      const banner = document.getElementById('update-banner');
+      if (banner) banner.style.display = 'flex';
+    };
+
+    // SW nuevo esperando (ya había uno activo antes)
+    if (reg.waiting) { mostrarBanner(); return; }
+
+    reg.addEventListener('updatefound', () => {
+      const nuevoSW = reg.installing;
+      nuevoSW.addEventListener('statechange', () => {
+        if (nuevoSW.state === 'installed' && navigator.serviceWorker.controller) {
+          mostrarBanner();
+        }
       });
-  }
+    });
+  }).catch((err) => {
+    console.warn('[PWA] Fallo al registrar el Service Worker:', err);
+  });
+
+  // Recargar todas las pestañas cuando el SW nuevo toma el control
+  let refrescando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refrescando) { refrescando = true; window.location.reload(); }
+  });
 }
+
+window.aplicarActualizacion = function() {
+  navigator.serviceWorker.getRegistration().then((reg) => {
+    if (reg?.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  });
+};
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 
