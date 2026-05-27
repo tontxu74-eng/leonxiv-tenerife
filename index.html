@@ -149,6 +149,19 @@
             </div>
           </div>
         </div>
+
+        <!-- Panel inferior de itinerarios -->
+        <div id="routes-panel" class="routes-panel" style="display:none;">
+          <div id="routes-panel-handle" class="routes-panel-handle" onclick="toggleRoutesPanel()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            <span>Itinerarios</span>
+            <span id="routes-panel-counter" class="routes-panel-badge">0 / 0</span>
+            <span id="routes-panel-arrow" class="routes-panel-arrow">↑</span>
+          </div>
+          <div id="routes-panel-list" class="routes-panel-list">
+            <!-- Dinámico -->
+          </div>
+        </div>
       </section>
 
       <!-- PESTAÑA 3: DESPLIEGUE (EQUIPOS) -->

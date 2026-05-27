@@ -8,6 +8,7 @@ let appState = {
   locations: [],
   routes: [],
   channels: [],
+  routeVisibility: {},
   isAdmin: false,
   firebaseEnabled: false,
   activeTab: 'dashboard',
@@ -317,6 +318,7 @@ function listenToFirestore() {
       seedFirestoreData('itinerarios', DEFAULT_ROUTES);
     }
     appState.routes = routes;
+    renderRoutesPanel();
     updateMapOverlays();
     if (appState.isAdmin) renderAdminLists();
   }, error => {
@@ -381,6 +383,7 @@ function loadLocalData() {
   renderEvents();
   renderContacts();
   renderChannels();
+  renderRoutesPanel();
   updateMapMarkers();
   updateMapOverlays();
   updateDashboardStats();
@@ -728,8 +731,9 @@ function updateMapOverlays() {
     appState.mapOverlays.locations[loc.id] = marker;
   });
 
-  // --- Dibujar rutas / itinerarios ---
+  // --- Dibujar rutas / itinerarios (solo las visibles) ---
   appState.routes.forEach(route => {
+    if (appState.routeVisibility[route.id] === false) return;
     if (!route.coordinates) return;
     const latlngs = route.coordinates.trim().split('\n').map(line => {
       const parts = line.split(',');
@@ -962,6 +966,70 @@ function renderContacts() {
     `;
   }).join('');
 }
+
+// Renderizar panel de itinerarios en el mapa
+function renderRoutesPanel() {
+  const panel = document.getElementById('routes-panel');
+  const handle = document.getElementById('routes-panel-handle');
+  const list = document.getElementById('routes-panel-list');
+  const counter = document.getElementById('routes-panel-counter');
+  if (!panel || !handle || !list || !counter) return;
+
+  if (appState.routes.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  panel.style.display = 'block';
+
+  // Inicializar visibilidad para rutas nuevas (por defecto visible)
+  appState.routes.forEach(route => {
+    if (appState.routeVisibility[route.id] === undefined) {
+      appState.routeVisibility[route.id] = true;
+    }
+  });
+
+  // Limpiar rutas eliminadas del estado de visibilidad
+  const activeIds = new Set(appState.routes.map(r => r.id));
+  Object.keys(appState.routeVisibility).forEach(id => {
+    if (!activeIds.has(id)) delete appState.routeVisibility[id];
+  });
+
+  const visibles = appState.routes.filter(r => appState.routeVisibility[r.id] !== false).length;
+  counter.textContent = `${visibles} / ${appState.routes.length}`;
+
+  list.innerHTML = appState.routes.map(route => {
+    const checked = appState.routeVisibility[route.id] !== false;
+    const color = route.color || 'hsl(var(--police-blue))';
+    return `
+      <label class="route-panel-item">
+        <span class="route-panel-dot" style="background:${color};"></span>
+        <span class="route-panel-name">${route.name}</span>
+        <input type="checkbox" class="route-panel-checkbox" ${checked ? 'checked' : ''}
+          onchange="toggleRouteVisibility('${route.id}', this.checked)">
+      </label>
+    `;
+  }).join('');
+}
+
+window.toggleRouteVisibility = function(id, visible) {
+  appState.routeVisibility[id] = visible;
+  updateMapOverlays();
+  // Actualizar contador del tirador
+  const counter = document.getElementById('routes-panel-counter');
+  if (counter) {
+    const visibles = appState.routes.filter(r => appState.routeVisibility[r.id] !== false).length;
+    counter.textContent = `${visibles} / ${appState.routes.length}`;
+  }
+};
+
+window.toggleRoutesPanel = function() {
+  const list = document.getElementById('routes-panel-list');
+  const arrow = document.getElementById('routes-panel-arrow');
+  if (!list) return;
+  const expanded = list.classList.toggle('expanded');
+  if (arrow) arrow.textContent = expanded ? '↓' : '↑';
+};
 
 // Renderizar Canales y Frecuencias
 function renderChannels() {

@@ -454,6 +454,90 @@ html {
   position: relative;
 }
 
+/* Panel inferior de itinerarios */
+#map-tab {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: calc(100vh - 63px - 65px);
+}
+#map-tab .map-container-wrapper {
+  flex: 1;
+  height: auto;
+}
+.routes-panel {
+  position: relative;
+  z-index: 10;
+  background: hsl(var(--bg-card));
+  border-top: 1px solid hsl(var(--border-color));
+}
+.routes-panel-handle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.routes-panel-handle:active {
+  background: hsl(var(--bg-darker));
+}
+.routes-panel-badge {
+  margin-left: 4px;
+  background: hsl(var(--police-blue) / 0.2);
+  color: hsl(var(--police-blue));
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.routes-panel-arrow {
+  margin-left: auto;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.routes-panel-list {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.routes-panel-list.expanded {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.route-panel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-top: 1px solid hsl(var(--border-color) / 0.5);
+}
+.route-panel-item:active {
+  background: hsl(var(--bg-darker));
+}
+.route-panel-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.route-panel-name {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+.route-panel-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: hsl(var(--police-blue));
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 #map {
   flex: 1;
   width: 100%;
