@@ -7,6 +7,7 @@ let appState = {
   contacts: [],
   locations: [],
   routes: [],
+  channels: [],
   isAdmin: false,
   firebaseEnabled: false,
   activeTab: 'dashboard',
@@ -37,6 +38,9 @@ const DEFAULT_LOCATIONS = [];
 // Rutas / Itinerarios por defecto (Semillas)
 // Rutas / Itinerarios por defecto (vacío — el admin los crea desde el panel)
 const DEFAULT_ROUTES = [];
+
+// Canales y Frecuencias por defecto (vacío — el admin los crea desde el panel)
+const DEFAULT_CHANNELS = [];
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -325,6 +329,19 @@ function listenToFirestore() {
   }, error => {
     console.error("Error escuchando rutas:", error);
   });
+
+  // Escuchar Canales y Frecuencias
+  appState.db.collection('canales').onSnapshot(snapshot => {
+    let channels = [];
+    snapshot.forEach(doc => {
+      channels.push({ id: doc.id, ...doc.data() });
+    });
+    appState.channels = channels;
+    renderChannels();
+    if (appState.isAdmin) renderAdminLists();
+  }, error => {
+    console.error("Error escuchando canales:", error);
+  });
 }
 
 // Inyectar datos semilla en Firestore por primera vez
@@ -352,10 +369,12 @@ function loadLocalData() {
   const localContacts = localStorage.getItem('uap_local_contacts');
   const localLocations = localStorage.getItem('uap_local_locations');
   const localRoutes = localStorage.getItem('uap_local_routes');
+  const localChannels = localStorage.getItem('uap_local_channels');
 
   appState.teams = localTeams ? JSON.parse(localTeams) : [...DEFAULT_TEAMS];
   appState.events = localEvents ? JSON.parse(localEvents) : [...DEFAULT_EVENTS];
   appState.contacts = localContacts ? JSON.parse(localContacts) : [...DEFAULT_CONTACTS];
+  appState.channels = localChannels ? JSON.parse(localChannels) : [...DEFAULT_CHANNELS];
   // Descartar ubicaciones y rutas semilla antiguas (ids que empiezan por "seed-")
   const parsedLocs = localLocations ? JSON.parse(localLocations) : [];
   appState.locations = parsedLocs.filter(l => !l.id.startsWith('seed-'));
@@ -368,6 +387,7 @@ function loadLocalData() {
   renderTeams();
   renderEvents();
   renderContacts();
+  renderChannels();
   updateMapMarkers();
   updateMapOverlays();
   updateDashboardStats();
@@ -400,6 +420,10 @@ function saveLocalData(type) {
   if (type === 'routes' || !type) {
     localStorage.setItem('uap_local_routes', JSON.stringify(appState.routes));
     updateMapOverlays();
+  }
+  if (type === 'channels' || !type) {
+    localStorage.setItem('uap_local_channels', JSON.stringify(appState.channels));
+    renderChannels();
   }
 
   if (appState.isAdmin) renderAdminLists();
@@ -946,6 +970,44 @@ function renderContacts() {
   }).join('');
 }
 
+// Renderizar Canales y Frecuencias
+function renderChannels() {
+  const container = document.getElementById('channels-container');
+  if (!container) return;
+
+  if (appState.channels.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--text-secondary); padding: 12px 0;">
+        No hay canales configurados.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = appState.channels.map(channel => {
+    const badgeClass = channel.priority === 'emergency' ? 'badge-red' :
+                       channel.priority === 'high' ? 'badge-gold' : 'badge-blue';
+    const urgentClass = channel.priority === 'emergency' ? ' urgent' : '';
+    return `
+      <div class="alert-item${urgentClass}">
+        <div class="alert-header">
+          <span>${channel.name}</span>
+          <span class="badge ${badgeClass}">${channel.type}</span>
+        </div>
+        <div>
+          <strong>${channel.frequency}</strong>${channel.channel ? ' (Canal ' + channel.channel + ')' : ''}
+          ${channel.description ? '<br>' + channel.description : ''}
+        </div>
+        ${appState.isAdmin ? `
+        <div class="admin-inline-actions" style="margin-top:8px;">
+          <button class="btn btn-sm btn-secondary" onclick="openEditChannelModal('${channel.id}')">Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteItem('canales', '${channel.id}', 'channels')">Borrar</button>
+        </div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
 // Actualizar Estadísticas en Dashboard
 function updateDashboardStats() {
   const tiene = (team, tipo) => (team.type || '').split(',').includes(tipo);
@@ -1106,6 +1168,7 @@ function renderAdminLists() {
   const adminContacts = document.getElementById('admin-contacts-list');
   const adminLocations = document.getElementById('admin-locations-list');
   const adminRoutes = document.getElementById('admin-routes-list');
+  const adminChannels = document.getElementById('admin-channels-list');
 
   // Counters
   document.getElementById('admin-count-teams').textContent = appState.teams.length;
@@ -1116,6 +1179,9 @@ function renderAdminLists() {
   }
   if (document.getElementById('admin-count-routes')) {
     document.getElementById('admin-count-routes').textContent = appState.routes.length;
+  }
+  if (document.getElementById('admin-count-channels')) {
+    document.getElementById('admin-count-channels').textContent = appState.channels.length;
   }
 
   // Equipos Admin
@@ -1199,6 +1265,24 @@ function renderAdminLists() {
         </div>
       `;
     }).join('');
+  }
+
+  // Canales Admin
+  if (adminChannels) {
+    adminChannels.innerHTML = appState.channels.length === 0
+      ? '<div style="color:var(--text-secondary); font-size:0.85rem; padding:8px 0;">No hay canales registrados.</div>'
+      : appState.channels.map(channel => `
+        <div class="admin-list-item">
+          <div class="admin-list-item-info">
+            <span class="admin-list-item-title">${channel.name} (${channel.type})</span>
+            <span class="admin-list-item-subtitle">${channel.frequency}${channel.channel ? ' · Canal ' + channel.channel : ''}</span>
+          </div>
+          <div class="admin-list-item-actions">
+            <button class="btn btn-sm btn-secondary" onclick="openEditChannelModal('${channel.id}')">Editar</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteItem('canales', '${channel.id}', 'channels')">Borrar</button>
+          </div>
+        </div>
+      `).join('');
   }
 }
 
@@ -2020,3 +2104,63 @@ function importDeploymentPlan(e) {
   reader.readAsText(file);
   e.target.value = ''; // Limpiar input file
 }
+
+// --- OPERACIONES DE CANALES Y FRECUENCIAS ---
+
+window.openAddChannelModal = function() {
+  document.getElementById('form-channel').reset();
+  document.getElementById('channel-id').value = '';
+  document.getElementById('modal-channel-title').textContent = 'Añadir Canal / Frecuencia';
+  openModal('modal-channel');
+};
+
+window.openEditChannelModal = function(id) {
+  const channel = appState.channels.find(c => c.id === id);
+  if (!channel) return;
+  document.getElementById('channel-id').value = channel.id;
+  document.getElementById('channel-name').value = channel.name || '';
+  document.getElementById('channel-type').value = channel.type || 'TETRA';
+  document.getElementById('channel-priority').value = channel.priority || 'normal';
+  document.getElementById('channel-frequency').value = channel.frequency || '';
+  document.getElementById('channel-number').value = channel.channel || '';
+  document.getElementById('channel-desc').value = channel.description || '';
+  document.getElementById('modal-channel-title').textContent = 'Editar Canal / Frecuencia';
+  openModal('modal-channel');
+};
+
+window.saveChannel = function() {
+  const form = document.getElementById('form-channel');
+  if (!form.reportValidity()) return;
+
+  const id = document.getElementById('channel-id').value;
+  const channelData = {
+    name: document.getElementById('channel-name').value.trim(),
+    type: document.getElementById('channel-type').value,
+    priority: document.getElementById('channel-priority').value,
+    frequency: document.getElementById('channel-frequency').value.trim(),
+    channel: document.getElementById('channel-number').value.trim(),
+    description: document.getElementById('channel-desc').value.trim()
+  };
+
+  if (appState.firebaseEnabled) {
+    const col = appState.db.collection('canales');
+    const promise = id ? col.doc(id).set(channelData) : col.add(channelData);
+    promise.then(() => {
+      showToast("Canal guardado en la nube", "success");
+      closeModal('modal-channel');
+    }).catch(err => {
+      console.error(err);
+      showToast("Error al guardar canal", "danger");
+    });
+  } else {
+    if (id) {
+      const idx = appState.channels.findIndex(c => c.id === id);
+      if (idx !== -1) appState.channels[idx] = { id, ...channelData };
+    } else {
+      appState.channels.push({ id: 'channel-' + Date.now(), ...channelData });
+    }
+    saveLocalData('channels');
+    showToast("Canal guardado localmente", "success");
+    closeModal('modal-channel');
+  }
+};

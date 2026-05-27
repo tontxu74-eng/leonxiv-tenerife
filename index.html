@@ -98,21 +98,8 @@
               <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0L20 8M4 8l6.3 13L14 8m-4-6h4M3 8h18"/></svg>
               Canales y Frecuencias
             </h2>
-            <div class="alerts-list">
-              <div class="alert-item">
-                <div class="alert-header">
-                  <span>CANAL DIRECTO PRINCIPAL</span>
-                  <span class="badge badge-blue">TETRA</span>
-                </div>
-                <div>Frecuencia y grupo del evento cargado en terminales: <strong>GRP_AER_LEON_14</strong> (Canal 12)</div>
-              </div>
-              <div class="alert-item urgent">
-                <div class="alert-header">
-                  <span>CANAL C-UAS / INHIBICIÓN</span>
-                  <span class="badge badge-red">EMERGENCIA</span>
-                </div>
-                <div>Coordinación directa con Puesto de Mando Principal en caso de detección no autorizada: <strong>GRP_CUAS_COORD</strong>.</div>
-              </div>
+            <div class="alerts-list" id="channels-container">
+              <!-- Dinámico -->
             </div>
           </div>
         </div>
@@ -302,6 +289,18 @@
                 <span class="badge badge-gold" id="admin-count-routes">0</span>
               </div>
               <div class="admin-list" id="admin-routes-list">
+                <!-- Dinámico -->
+              </div>
+            </div>
+
+            <!-- Sección: Canales y Frecuencias -->
+            <div class="admin-section">
+              <div class="admin-section-header">
+                <h3 class="admin-section-title">Canales y Frecuencias</h3>
+                <span class="badge badge-blue" id="admin-count-channels">0</span>
+              </div>
+              <button class="btn btn-sm" onclick="openAddChannelModal()" style="width:100%; margin-bottom:12px;">+ Añadir Canal</button>
+              <div class="admin-list" id="admin-channels-list">
                 <!-- Dinámico -->
               </div>
             </div>
@@ -689,6 +688,65 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('modal-route')">Cancelar</button>
         <button class="btn" onclick="saveRoute()">Guardar Itinerario</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CANAL / FRECUENCIA (AÑADIR / EDITAR) -->
+  <div class="modal-backdrop" id="modal-channel">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal-channel-title">Añadir Canal / Frecuencia</h4>
+        <button class="modal-close" onclick="closeModal('modal-channel')">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="form-channel">
+          <input type="hidden" id="channel-id">
+          <div class="form-group">
+            <label class="form-label" for="channel-name">Nombre del Canal</label>
+            <input type="text" id="channel-name" class="form-input" placeholder="Ej. CANAL DIRECTO PRINCIPAL" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="channel-type">Tipo</label>
+              <select id="channel-type" class="form-select" required>
+                <option value="TETRA">TETRA</option>
+                <option value="VHF">Radio VHF</option>
+                <option value="UHF">Radio UHF</option>
+                <option value="SATCOM">SATCOM</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="channel-priority">Prioridad</label>
+              <select id="channel-priority" class="form-select">
+                <option value="normal">Normal</option>
+                <option value="high">Alta</option>
+                <option value="emergency">Emergencia</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="channel-frequency">Grupo / Frecuencia</label>
+              <input type="text" id="channel-frequency" class="form-input" placeholder="Ej. GRP_AER_LEON_14" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="channel-number">Nº Canal</label>
+              <input type="text" id="channel-number" class="form-input" placeholder="Ej. 12">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="channel-desc">Descripción Operativa</label>
+            <textarea id="channel-desc" class="form-textarea" rows="3" placeholder="Detalles de uso, restricciones, asignación de equipos..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-channel')">Cancelar</button>
+        <button class="btn" onclick="saveChannel()">Guardar Canal</button>
       </div>
     </div>
   </div>
