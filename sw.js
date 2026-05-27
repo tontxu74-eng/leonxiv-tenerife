@@ -1,6 +1,6 @@
 /* sw.js - Service Worker para soporte offline de la app táctica UAP León XIV */
 
-const CACHE_NAME = 'uap-tactic-cache-v2';
+const CACHE_NAME = 'uap-tactic-tenerife-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

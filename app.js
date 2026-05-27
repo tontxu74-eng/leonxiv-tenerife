@@ -24,8 +24,8 @@ let appState = {
 
 // Coordenadas Semilla
 const SEED_COORDS = {
-  1: { lat: 28.100387400330703, lng: -15.456785262068824, label: "PMA (Base)" },
-  2: { lat: 28.100800500492635, lng: -15.414901945876656, label: "Santa Catalina" }
+  1: { lat: 28.46367, lng: -16.25190, label: "PMA (Base)" },
+  2: { lat: 28.46367, lng: -16.25190, label: "Punto de Referencia" }
 };
 
 // Datos semilla por defecto (si la base de datos está vacía o corre en local)
@@ -190,12 +190,12 @@ function loadFirebaseScripts() {
 
 // Configuración de producción (siempre activa)
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAGCnoClKd_D-OnFTAbx-7Xr6mqF8tz9CY",
-  authDomain: "leonxiv-uap.firebaseapp.com",
-  projectId: "leonxiv-uap",
-  storageBucket: "leonxiv-uap.firebasestorage.app",
-  messagingSenderId: "549657606381",
-  appId: "1:549657606381:web:810f4a505181eea0a5b4e4"
+  apiKey: "AIzaSyCtQtD1nux76h3OBiCcIOUCTZ9PtvAklos",
+  authDomain: "leonxiv-tenerife.firebaseapp.com",
+  projectId: "leonxiv-tenerife",
+  storageBucket: "leonxiv-tenerife.firebasestorage.app",
+  messagingSenderId: "732075057423",
+  appId: "1:732075057423:web:946134c360814f0dd5de7a"
 };
 
 function setupFirebase() {
@@ -458,8 +458,8 @@ function updateNetworkBadge(online) {
 function initMap() {
   if (appState.map) return; // Ya inicializado
 
-  // Crear mapa centrado en Las Palmas de G.C. (Coordenada Semilla 1)
-  const defaultCenter = [28.100387400330703, -15.456785262068824];
+  // Centrar el mapa en la coordenada semilla del proyecto
+  const defaultCenter = [SEED_COORDS[1].lat, SEED_COORDS[1].lng];
   appState.map = L.map('map', {
     zoomControl: false, // Lo reposicionamos más tarde
     attributionControl: false

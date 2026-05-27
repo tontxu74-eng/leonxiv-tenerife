@@ -1,7 +1,7 @@
 {
-  "short_name": "Disp. León XIV",
-  "name": "Dispositivo Táctico León XIV - Unidad Aérea de la Policía",
-  "description": "Aplicación web táctica para la gestión y consulta del despliegue aéreo de seguridad durante la visita de SS León XIV.",
+  "short_name": "Disp. León XIV TFE",
+  "name": "Dispositivo Táctico León XIV - Tenerife",
+  "description": "Aplicación web táctica para la gestión y consulta del despliegue aéreo de seguridad durante la visita de SS León XIV a Tenerife.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b0f19",
