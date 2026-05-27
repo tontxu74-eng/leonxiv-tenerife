@@ -244,16 +244,14 @@ function listenToFirestore() {
     snapshot.forEach(doc => {
       teams.push({ id: doc.id, ...doc.data() });
     });
-    // Si está vacío en la nube en el primer inicio, lo rellenamos con semillas
     if (teams.length === 0) {
       seedFirestoreData('equipos', DEFAULT_TEAMS);
-    } else {
-      appState.teams = teams;
-      renderTeams();
-      updateMapMarkers();
-      updateDashboardStats();
-      if (appState.isAdmin) renderAdminLists();
     }
+    appState.teams = teams;
+    renderTeams();
+    updateMapMarkers();
+    updateDashboardStats();
+    if (appState.isAdmin) renderAdminLists();
   }, error => {
     console.error("Error escuchando equipos:", error);
     showToast("Error de sincronización de equipos", "danger");
@@ -267,14 +265,12 @@ function listenToFirestore() {
     });
     if (events.length === 0) {
       seedFirestoreData('eventos', DEFAULT_EVENTS);
-    } else {
-      // Ordenar por hora (formato texto, ej: '08:00', '12:00')
-      events.sort((a, b) => a.time.localeCompare(b.time));
-      appState.events = events;
-      renderEvents();
-      updateDashboardStats();
-      if (appState.isAdmin) renderAdminLists();
     }
+    events.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    appState.events = events;
+    renderEvents();
+    updateDashboardStats();
+    if (appState.isAdmin) renderAdminLists();
   }, error => {
     console.error("Error escuchando eventos:", error);
   });
@@ -287,11 +283,10 @@ function listenToFirestore() {
     });
     if (contacts.length === 0) {
       seedFirestoreData('contactos', DEFAULT_CONTACTS);
-    } else {
-      appState.contacts = contacts;
-      renderContacts();
-      if (appState.isAdmin) renderAdminLists();
     }
+    appState.contacts = contacts;
+    renderContacts();
+    if (appState.isAdmin) renderAdminLists();
   }, error => {
     console.error("Error escuchando contactos:", error);
   });
@@ -304,11 +299,10 @@ function listenToFirestore() {
     });
     if (locations.length === 0) {
       seedFirestoreData('ubicaciones', DEFAULT_LOCATIONS);
-    } else {
-      appState.locations = locations;
-      updateMapOverlays();
-      if (appState.isAdmin) renderAdminLists();
     }
+    appState.locations = locations;
+    updateMapOverlays();
+    if (appState.isAdmin) renderAdminLists();
   }, error => {
     console.error("Error escuchando ubicaciones:", error);
   });
@@ -321,11 +315,10 @@ function listenToFirestore() {
     });
     if (routes.length === 0) {
       seedFirestoreData('itinerarios', DEFAULT_ROUTES);
-    } else {
-      appState.routes = routes;
-      updateMapOverlays();
-      if (appState.isAdmin) renderAdminLists();
     }
+    appState.routes = routes;
+    updateMapOverlays();
+    if (appState.isAdmin) renderAdminLists();
   }, error => {
     console.error("Error escuchando rutas:", error);
   });
