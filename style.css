@@ -455,13 +455,14 @@ html {
 }
 
 /* Panel inferior de itinerarios */
-#map-tab {
+#map-tab.active {
   display: flex;
   flex-direction: column;
   position: relative;
   height: calc(100vh - 63px - 65px);
+  padding: 0;
 }
-#map-tab .map-container-wrapper {
+#map-tab.active .map-container-wrapper {
   flex: 1;
   height: auto;
 }
