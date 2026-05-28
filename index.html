@@ -359,30 +359,6 @@
               <button class="btn btn-sm btn-danger" onclick="borrarTodosLosDatos()" style="width:auto;">Borrar todos los datos</button>
             </div>
 
-            <!-- Sección: Configuración Firebase (Nube) -->
-            <div class="admin-section">
-              <div class="admin-section-header">
-                <h3 class="admin-section-title">Conexión a Firebase (Nube)</h3>
-                <span class="badge" id="firebase-status-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">Desconectado</span>
-              </div>
-              <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
-                Pega la configuración del SDK de Firebase (en formato JSON) para habilitar la sincronización en la nube con todos los agentes. Si está desconectado, los datos se guardan en el dispositivo local.
-              </p>
-              <div class="form-group">
-                <textarea id="firebase-config-input" class="form-textarea" rows="4" style="font-family: monospace; font-size: 0.78rem;" placeholder='{
-  "apiKey": "AIzaSy...",
-  "authDomain": "leonxiv-uap.firebaseapp.com",
-  "projectId": "leonxiv-uap",
-  "storageBucket": "leonxiv-uap.appspot.com",
-  "messagingSenderId": "123456789",
-  "appId": "1:12345:web:abcd"
-}'></textarea>
-              </div>
-              <div style="display: flex; gap: 10px;">
-                <button class="btn btn-sm" id="btn-save-firebase-config" style="width: auto;">Guardar y Conectar</button>
-                <button class="btn btn-sm btn-secondary" id="btn-clear-firebase-config" style="width: auto; color: hsl(var(--danger));">Borrar Conexión</button>
-              </div>
-            </div>
           </div>
         </div>
       </section>

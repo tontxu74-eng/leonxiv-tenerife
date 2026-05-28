@@ -429,27 +429,14 @@ function saveLocalData(type) {
 function updateNetworkBadge(online) {
   const badge = document.getElementById('network-status');
   const text = document.getElementById('network-text');
-  const fbStatusBadge = document.getElementById('firebase-status-badge');
   if (!badge || !text) return;
 
   if (online) {
     badge.className = 'connection-badge';
     text.textContent = 'CLOUD-SYNC';
-    if (fbStatusBadge) {
-      fbStatusBadge.textContent = 'CONECTADO';
-      fbStatusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
-      fbStatusBadge.style.color = '#34d399';
-      fbStatusBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-    }
   } else {
     badge.className = 'connection-badge offline';
     text.textContent = 'MODO LOCAL';
-    if (fbStatusBadge) {
-      fbStatusBadge.textContent = 'LOCAL';
-      fbStatusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
-      fbStatusBadge.style.color = '#f87171';
-      fbStatusBadge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-    }
   }
 }
 
@@ -1147,51 +1134,6 @@ function initUI() {
     fileInput.addEventListener('change', importDeploymentPlan);
   }
 
-  // Manejadores de Configuración Firebase
-  const btnSaveFb = document.getElementById('btn-save-firebase-config');
-  const btnClearFb = document.getElementById('btn-clear-firebase-config');
-  const fbConfigInput = document.getElementById('firebase-config-input');
-
-  // Rellenar input con la configuración existente si la hay
-  const savedConfig = localStorage.getItem('uap_firebase_config');
-  if (savedConfig && fbConfigInput) {
-    fbConfigInput.value = savedConfig;
-  }
-
-  if (btnSaveFb) {
-    btnSaveFb.addEventListener('click', () => {
-      const value = fbConfigInput.value.trim();
-      if (!value) {
-        showToast("El campo de configuración está vacío", "warning");
-        return;
-      }
-      try {
-        const parsed = JSON.parse(value);
-        if (!parsed.apiKey || !parsed.projectId) {
-          throw new Error("Faltan campos obligatorios como apiKey o projectId");
-        }
-        localStorage.setItem('uap_firebase_config', JSON.stringify(parsed, null, 2));
-        showToast("Configuración guardada. Reiniciando conexión...", "success");
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } catch (err) {
-        showToast("Error de formato JSON: " + err.message, "danger");
-      }
-    });
-  }
-
-  if (btnClearFb) {
-    btnClearFb.addEventListener('click', () => {
-      if (confirm("¿Estás seguro de desconectar Firebase? Se volverá al almacenamiento local.")) {
-        localStorage.removeItem('uap_firebase_config');
-        showToast("Configuración eliminada. Reiniciando en Modo Local...", "warning");
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      }
-    });
-  }
 }
 
 // Establecer acceso administrativo
