@@ -939,11 +939,12 @@ function renderEvents() {
     const titulo = formatearFechaEvento(clave || null);
     const itemsHtml = grupos[clave].map(event => {
       const isVip = event.vip === 'si';
+      const fechaCorta = event.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '') : '';
       return `
         <div class="timeline-item ${isVip ? 'vip' : ''}">
           <div class="timeline-time">
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            ${event.time} H
+            <span class="timeline-date-time">${event.time} H${fechaCorta ? ` · ${fechaCorta}` : ''}</span>
           </div>
           <div class="timeline-card">
             <div class="timeline-title">${event.title}</div>

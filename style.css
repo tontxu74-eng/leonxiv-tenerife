@@ -560,6 +560,13 @@ html {
   z-index: 999;
   max-width: 280px;
   pointer-events: auto;
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .map-overlay-panel {
+    display: block;
+  }
 }
 
 .tactical-info-box {
@@ -902,6 +909,12 @@ html {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+}
+
+.timeline-date-time {
+  display: inline;
+  word-break: break-word;
 }
 
 .timeline-item.vip .timeline-time {
