@@ -235,6 +235,14 @@ function setupFirebase() {
     });
 }
 
+// Ordena eventos: primero por fecha (sin fecha al final), luego por hora
+function compararEventos(a, b) {
+  const fechaA = a.date || 'ZZZZ';
+  const fechaB = b.date || 'ZZZZ';
+  if (fechaA !== fechaB) return fechaA.localeCompare(fechaB);
+  return (a.time || '').localeCompare(b.time || '');
+}
+
 // Escuchas en tiempo real desde Firestore
 function listenToFirestore() {
   if (!appState.db) return;
@@ -267,7 +275,7 @@ function listenToFirestore() {
     if (events.length === 0) {
       seedFirestoreData('eventos', DEFAULT_EVENTS);
     }
-    events.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    events.sort(compararEventos);
     appState.events = events;
     renderEvents();
     updateDashboardStats();
@@ -377,7 +385,7 @@ function loadLocalData() {
   appState.routes = parsedRoutes.filter(r => !r.id.startsWith('seed-'));
 
   // Ordenar eventos localmente
-  appState.events.sort((a, b) => a.time.localeCompare(b.time));
+  appState.events.sort(compararEventos);
 
   renderTeams();
   renderEvents();
@@ -401,7 +409,7 @@ function saveLocalData(type) {
     updateDashboardStats();
   }
   if (type === 'events' || !type) {
-    appState.events.sort((a, b) => a.time.localeCompare(b.time));
+    appState.events.sort(compararEventos);
     localStorage.setItem('uap_local_events', JSON.stringify(appState.events));
     renderEvents();
   }
@@ -883,6 +891,20 @@ function renderTeams() {
   }).join('');
 }
 
+// Formatea "YYYY-MM-DD" como "Martes, 3 de junio de 2025" en español
+function formatearFechaEvento(dateStr) {
+  if (!dateStr) return 'Fecha no especificada';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const fecha = new Date(Date.UTC(year, month - 1, day));
+  return fecha.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
+}
+
 // Renderizar Eventos / Agenda
 function renderEvents() {
   const container = document.getElementById('timeline-container');
@@ -897,23 +919,49 @@ function renderEvents() {
     return;
   }
 
-  container.innerHTML = appState.events.map(event => {
-    const isVip = event.vip === 'si';
+  // Agrupar eventos por fecha (los sin fecha van bajo la clave '')
+  const grupos = {};
+  appState.events.forEach(event => {
+    const clave = event.date || '';
+    if (!grupos[clave]) grupos[clave] = [];
+    grupos[clave].push(event);
+  });
+
+  // Ordenar las claves: fechas reales primero (cronológico), sin fecha al final
+  const claves = Object.keys(grupos).sort((a, b) => {
+    if (a === '' && b === '') return 0;
+    if (a === '') return 1;
+    if (b === '') return -1;
+    return a.localeCompare(b);
+  });
+
+  container.innerHTML = claves.map(clave => {
+    const titulo = formatearFechaEvento(clave || null);
+    const itemsHtml = grupos[clave].map(event => {
+      const isVip = event.vip === 'si';
+      return `
+        <div class="timeline-item ${isVip ? 'vip' : ''}">
+          <div class="timeline-time">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            ${event.time} H
+          </div>
+          <div class="timeline-card">
+            <div class="timeline-title">${event.title}</div>
+            <div class="timeline-desc">${event.desc}</div>
+            ${appState.isAdmin ? `
+            <div class="admin-inline-actions">
+              <button class="btn btn-sm btn-secondary" onclick="openEditEventModal('${event.id}')">Editar</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteItem('eventos', '${event.id}', 'events')">Borrar</button>
+            </div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
     return `
-      <div class="timeline-item ${isVip ? 'vip' : ''}">
-        <div class="timeline-time">
-          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          ${event.time} H
-        </div>
-        <div class="timeline-card">
-          <div class="timeline-title">${event.title}</div>
-          <div class="timeline-desc">${event.desc}</div>
-          ${appState.isAdmin ? `
-          <div class="admin-inline-actions">
-            <button class="btn btn-sm btn-secondary" onclick="openEditEventModal('${event.id}')">Editar</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteItem('eventos', '${event.id}', 'events')">Borrar</button>
-          </div>` : ''}
-        </div>
+      <div class="timeline-day-group">
+        <div class="timeline-day-header">${titulo}</div>
+        ${itemsHtml}
       </div>
     `;
   }).join('');
@@ -1208,7 +1256,7 @@ function renderAdminLists() {
     adminEvents.innerHTML = appState.events.map(event => `
       <div class="admin-list-item">
         <div class="admin-list-item-info">
-          <span class="admin-list-item-title">${event.time} H - ${event.title}</span>
+          <span class="admin-list-item-title">${event.date ? event.date + ' · ' : ''}${event.time} H - ${event.title}</span>
           <span class="admin-list-item-subtitle">${event.vip === 'si' ? '⭐ Comitiva VIP' : 'Normal'}</span>
         </div>
         <div class="admin-list-item-actions">
@@ -1403,6 +1451,7 @@ window.openEditEventModal = function(id) {
 
   document.getElementById('event-id').value = event.id;
   document.getElementById('event-title').value = event.title;
+  document.getElementById('event-date').value = event.date || '';
   document.getElementById('event-time').value = event.time;
   document.getElementById('event-vip').value = event.vip;
   document.getElementById('event-desc').value = event.desc;
@@ -1418,6 +1467,7 @@ window.saveEvent = function() {
   const id = document.getElementById('event-id').value;
   const eventData = {
     title: document.getElementById('event-title').value,
+    date: document.getElementById('event-date').value,
     time: document.getElementById('event-time').value,
     vip: document.getElementById('event-vip').value,
     desc: document.getElementById('event-desc').value
