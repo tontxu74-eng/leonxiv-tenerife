@@ -238,6 +238,7 @@ html {
   font-weight: 700;
   margin-bottom: 6px;
   background: linear-gradient(to right, #fff, hsl(var(--text-secondary)));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
