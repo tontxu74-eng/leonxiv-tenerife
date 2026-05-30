@@ -114,25 +114,30 @@ function initApp() {
   }, 800);
 }
 
+// Referencia al Service Worker nuevo que está "en espera" (waiting).
+// La guardamos al detectarlo para no depender de volver a consultarlo en el clic.
+let swEnEspera = null;
+
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
   navigator.serviceWorker.register('./sw.js').then((reg) => {
     console.log('[PWA] Service Worker registrado:', reg.scope);
 
-    const mostrarBanner = () => {
+    const mostrarBanner = (sw) => {
+      swEnEspera = sw; // recordar el worker concreto al que avisar después
       const banner = document.getElementById('update-banner');
       if (banner) banner.style.display = 'flex';
     };
 
     // SW nuevo esperando (ya había uno activo antes)
-    if (reg.waiting) { mostrarBanner(); return; }
+    if (reg.waiting) { mostrarBanner(reg.waiting); return; }
 
     reg.addEventListener('updatefound', () => {
       const nuevoSW = reg.installing;
       nuevoSW.addEventListener('statechange', () => {
         if (nuevoSW.state === 'installed' && navigator.serviceWorker.controller) {
-          mostrarBanner();
+          mostrarBanner(nuevoSW);
         }
       });
     });
@@ -148,9 +153,27 @@ function registerServiceWorker() {
 }
 
 window.aplicarActualizacion = function() {
+  // Red de seguridad: si en 3 s la página no se ha recargado sola
+  // (controllerchange no llegó), forzamos limpieza de cachés y recarga.
+  const redDeSeguridad = () => setTimeout(() => window.forzarActualizacion(), 3000);
+
+  // Camino normal: avisar al SW en espera para que tome el control de inmediato.
+  if (swEnEspera) {
+    swEnEspera.postMessage({ type: 'SKIP_WAITING' });
+    redDeSeguridad();
+    return;
+  }
+
+  // No teníamos la referencia: intentar recuperarla una última vez.
   navigator.serviceWorker.getRegistration().then((reg) => {
-    if (reg?.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-  });
+    if (reg?.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      redDeSeguridad();
+    } else {
+      // No hay worker en espera localizable: forzar limpieza y recarga directamente.
+      window.forzarActualizacion();
+    }
+  }).catch(() => window.forzarActualizacion());
 };
 
 window.forzarActualizacion = async function() {
