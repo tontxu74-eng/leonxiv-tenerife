@@ -48,6 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
 });
 
+// ⚠️ RECORDATORIO — SUBIR LA VERSIÓN EN CADA ACTUALIZACIÓN ⚠️
+// Cada vez que cambies app.js, style.css, index.html o sw.js y subas los cambios,
+// incrementa el número "v" de version.json (p. ej. "1.0.3" → "1.0.4").
+// Por qué: esta función compara version.json con la versión guardada y, si cambió,
+// limpia las cachés y recarga la app SOLA en todos los dispositivos. Es el método
+// fiable de despliegue. Si NO subes la versión, los dispositivos se quedarán con la
+// copia antigua hasta que cada usuario actualice a mano.
 async function checkForUpdates() {
   try {
     const res = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
