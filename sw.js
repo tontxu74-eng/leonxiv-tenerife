@@ -43,6 +43,15 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith('http')) return;
 
+  // Firestore y APIs de Google: NUNCA interceptar.
+  // El tiempo real usa una conexión continua que el Service Worker no debe tocar.
+  // Al hacer 'return' sin responder, el navegador gestiona la petición directamente.
+  if (event.request.url.includes('googleapis.com') ||
+      event.request.url.includes('firebaseio.com') ||
+      event.request.url.includes('firebase.googleapis.com')) {
+    return;
+  }
+
   // version.json: SIEMPRE red, nunca caché — es el mecanismo de detección de actualizaciones
   if (event.request.url.includes('version.json')) {
     event.respondWith(fetch(event.request, { cache: 'no-store' }));
