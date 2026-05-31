@@ -580,6 +580,24 @@ function initMap() {
   });
 }
 
+function notasCardHtml(notes) {
+  if (Array.isArray(notes) && notes.length > 0) {
+    return notes.map((n, i) => {
+      const color = NOTAS_COLORES[i % NOTAS_COLORES.length];
+      const fechaStr = n.fecha
+        ? new Date(n.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+        : '—';
+      return `<div style="border-left:3px solid ${color};padding:4px 7px;border-radius:3px;background:${color}18;margin-bottom:3px;">` +
+        `<div style="color:${color};font-size:0.8rem;font-weight:bold;">📅 ${fechaStr}</div>` +
+        `<div style="font-size:0.85rem;color:var(--text-secondary);margin-top:1px;">${n.texto}</div></div>`;
+    }).join('');
+  }
+  if (typeof notes === 'string' && notes.trim()) {
+    return `<div style="font-style:italic;font-size:0.85rem;color:var(--text-secondary);">${notes}</div>`;
+  }
+  return '';
+}
+
 function notasPopupHtml(team) {
   if (Array.isArray(team.notes) && team.notes.length > 0) {
     const blocks = team.notes.map((n, i) => {
@@ -944,10 +962,10 @@ function renderTeams() {
             <div class="team-info-label">Dotación Policial</div>
             <div class="team-info-val">${team.officers || 'Sin asignar'}</div>
           </div>
-          ${team.notes ? `
-          <div style="grid-column: span 2; margin-top: 6px; border-top: 1px dashed var(--border-color); padding-top: 6px; color: var(--text-secondary); font-style: italic;">
+          ${(Array.isArray(team.notes) ? team.notes.length > 0 : !!team.notes) ? `
+          <div style="grid-column: span 2; margin-top: 6px; border-top: 1px dashed var(--border-color); padding-top: 6px;">
             <div class="team-info-label">Instrucciones Operativas</div>
-            <div>${team.notes}</div>
+            ${notasCardHtml(team.notes)}
           </div>` : ''}
         </div>
         <div class="team-actions">

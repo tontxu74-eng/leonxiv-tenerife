@@ -1174,9 +1174,10 @@ html {
   backdrop-filter: blur(4px);
   z-index: 2000;
   display: none;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 16px;
+  overflow-y: auto;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -1193,9 +1194,7 @@ html {
   box-shadow: 0 10px 40px rgba(0,0,0,0.8);
   animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
-  max-height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
+  margin: auto;
 }
 
 @keyframes modalSlide {
@@ -1233,9 +1232,6 @@ html {
 
 .modal-body {
   padding: 20px;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .modal-footer {
