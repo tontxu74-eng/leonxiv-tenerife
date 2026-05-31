@@ -1394,6 +1394,7 @@ window.openEditTeamModal = function(id) {
   document.getElementById('team-sector').value = team.sector;
   document.getElementById('team-lat').value = team.lat;
   document.getElementById('team-lng').value = team.lng;
+  document.getElementById('team-coords-input').value = (team.lat && team.lng) ? `${team.lat}, ${team.lng}` : '';
   actualizarDisplayCoordsEquipo();
   document.getElementById('team-officers').value = team.officers || '';
   document.getElementById('team-phone').value = team.phone || '';
@@ -1404,8 +1405,34 @@ window.openEditTeamModal = function(id) {
   openModal('modal-team');
 };
 
+// Parsear coordenadas escritas a mano: admite "[40.4898, -3.5918]", "40.4898, -3.5918" o "40.4898 -3.5918"
+function parsearCoordenadasEquipo(texto) {
+  if (!texto) return null;
+  const limpio = texto.replace(/[\[\]()]/g, ' ').trim();
+  const partes = limpio.split(/[\s,]+/).filter(p => p.length > 0);
+  if (partes.length !== 2) return null;
+  const lat = parseFloat(partes[0]);
+  const lng = parseFloat(partes[1]);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
 window.saveTeam = function() {
   const form = document.getElementById('form-team');
+
+  // Coordenadas escritas a mano: tienen prioridad sobre el punto del mapa
+  const coordsManual = document.getElementById('team-coords-input').value.trim();
+  if (coordsManual) {
+    const c = parsearCoordenadasEquipo(coordsManual);
+    if (!c) {
+      showToast("Coordenadas no válidas. Usa el formato: 40.4898, -3.5918", "danger");
+      return;
+    }
+    document.getElementById('team-lat').value = c.lat;
+    document.getElementById('team-lng').value = c.lng;
+  }
+
   if (!form.reportValidity()) return;
 
   const lat = normalizarInputCoordenada('team-lat');
