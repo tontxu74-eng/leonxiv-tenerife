@@ -24,8 +24,8 @@ let appState = {
 
 // Coordenadas Semilla
 const SEED_COORDS = {
-  1: { lat: 28.46367, lng: -16.25190, label: "PMA (Base)" },
-  2: { lat: 28.46367, lng: -16.25190, label: "Punto de Referencia" }
+  1: { lat: 28.100387400330703, lng: -15.456785262068824, label: "PMA (Base)" },
+  2: { lat: 28.100800500492635, lng: -15.414901945876656, label: "Santa Catalina" }
 };
 
 // Datos semilla por defecto (si la base de datos está vacía o corre en local)
@@ -220,12 +220,12 @@ function loadFirebaseScripts() {
 
 // Configuración de producción (siempre activa)
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCtQtD1nux76h3OBiCcIOUCTZ9PtvAklos",
-  authDomain: "leonxiv-tenerife.firebaseapp.com",
-  projectId: "leonxiv-tenerife",
-  storageBucket: "leonxiv-tenerife.firebasestorage.app",
-  messagingSenderId: "732075057423",
-  appId: "1:732075057423:web:946134c360814f0dd5de7a"
+  apiKey: "AIzaSyAGCnoClKd_D-OnFTAbx-7Xr6mqF8tz9CY",
+  authDomain: "leonxiv-uap.firebaseapp.com",
+  projectId: "leonxiv-uap",
+  storageBucket: "leonxiv-uap.firebasestorage.app",
+  messagingSenderId: "549657606381",
+  appId: "1:549657606381:web:810f4a505181eea0a5b4e4"
 };
 
 function setupFirebase() {
@@ -483,8 +483,8 @@ function updateNetworkBadge(online) {
 function initMap() {
   if (appState.map) return; // Ya inicializado
 
-  // Centrar el mapa en la coordenada semilla del proyecto
-  const defaultCenter = [SEED_COORDS[1].lat, SEED_COORDS[1].lng];
+  // Crear mapa centrado en Las Palmas de G.C. (Coordenada Semilla 1)
+  const defaultCenter = [28.100387400330703, -15.456785262068824];
   appState.map = L.map('map', {
     zoomControl: false, // Lo reposicionamos más tarde
     attributionControl: false
@@ -577,6 +577,25 @@ function initMap() {
   });
 }
 
+function notasPopupHtml(team) {
+  if (Array.isArray(team.notes) && team.notes.length > 0) {
+    const blocks = team.notes.map((n, i) => {
+      const color = NOTAS_COLORES[i % NOTAS_COLORES.length];
+      const fechaStr = n.fecha
+        ? new Date(n.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+        : '—';
+      return `<div style="border-left:3px solid ${color};padding:4px 7px;border-radius:3px;background:${color}18;margin-bottom:3px;">` +
+        `<div style="color:${color};font-size:0.8rem;font-weight:bold;">📅 ${fechaStr}</div>` +
+        `<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:1px;">${n.texto}</div></div>`;
+    }).join('');
+    return `<div style="margin-top:6px;border-top:1px solid var(--border-color);padding-top:6px;">${blocks}</div>`;
+  }
+  if (typeof team.notes === 'string' && team.notes.trim()) {
+    return `<div style="margin-top:4px;border-top:1px solid var(--border-color);padding-top:4px;font-style:italic;font-size:0.75rem;">${team.notes}</div>`;
+  }
+  return '';
+}
+
 // Actualizar marcadores tácticos en el mapa
 function updateMapMarkers() {
   if (!appState.map) return;
@@ -594,15 +613,31 @@ function updateMapMarkers() {
   appState.teams.forEach(team => {
     const lat = parseFloat(team.lat);
     const lng = parseFloat(team.lng);
+
+    // Guard: MOVIL sin coordenadas aún no aparece en el mapa
+    if (team.type === 'MOVIL' && (isNaN(lat) || isNaN(lng))) return;
     if (isNaN(lat) || isNaN(lng)) return;
 
-    // Icono y color según tipos (HELO tiene prioridad visual, luego CUAS, luego UAS)
+    // Icono y color según tipos
     const tipos = (team.type || 'UAS').split(',');
-    const primerTipo = tipos.includes('HELO') ? 'HELO' : (tipos.includes('CUAS') ? 'CUAS' : 'UAS');
-    const colorHex = primerTipo === 'HELO' ? 'hsl(var(--gold-papal))' : (primerTipo === 'CUAS' ? 'hsl(var(--danger))' : 'hsl(var(--police-blue))');
-    const iconoEmoji = tipos.map(t => t === 'HELO' ? '🚁' : (t === 'CUAS' ? '🛡️' : '🛸')).join('');
+    let primerTipo, colorHex, iconoEmoji;
+
+    if (tipos.includes('MOVIL')) {
+      primerTipo = 'MOVIL';
+      colorHex = '#4caf50'; // Verde para MOVIL
+      iconoEmoji = '🚗';
+    } else {
+      primerTipo = tipos.includes('HELO') ? 'HELO' : (tipos.includes('CUAS') ? 'CUAS' : 'UAS');
+      colorHex = primerTipo === 'HELO' ? 'hsl(var(--gold-papal))' : (primerTipo === 'CUAS' ? 'hsl(var(--danger))' : 'hsl(var(--police-blue))');
+      iconoEmoji = tipos.map(t => t === 'HELO' ? '🚁' : (t === 'CUAS' ? '🛡️' : '🛸')).join('');
+    }
+
     const badgesPopup = tipos.map(t => {
-      const cl = t === 'HELO' ? 'badge-gold' : (t === 'CUAS' ? 'badge-red' : 'badge-blue');
+      let cl;
+      if (t === 'MOVIL') cl = 'badge-green';
+      else if (t === 'HELO') cl = 'badge-gold';
+      else if (t === 'CUAS') cl = 'badge-red';
+      else cl = 'badge-blue';
       return `<span class="badge ${cl}">${t}</span>`;
     }).join(' ');
 
@@ -618,7 +653,8 @@ function updateMapMarkers() {
           ${team.officers ? `<strong>Dotación:</strong> ${team.officers}<br>` : ''}
           ${team.phone ? `<strong>Tlf:</strong> <a href="tel:${team.phone}" style="color: hsl(var(--police-blue)); font-weight: 600;">${team.phone}</a><br>` : ''}
           <strong>Radio:</strong> ${team.freq || 'Sin asignar'}<br>
-          ${team.notes ? `<div style="margin-top: 4px; border-top: 1px solid var(--border-color); padding-top: 4px; font-style: italic; font-size: 0.75rem;">${team.notes}</div>` : ''}
+          ${primerTipo === 'MOVIL' && team.lastGpsUpdate ? `<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: #4caf50;">📡 Última pos. GPS: ${team.lastGpsUpdate}</div>` : ''}
+          ${notasPopupHtml(team)}
         </div>
         <div class="map-popup-footer">
           <button class="btn btn-sm" onclick="navigateTo(${lat}, ${lng})" style="font-size: 0.75rem; min-height: 32px; padding: 4px 10px;">
@@ -630,8 +666,12 @@ function updateMapMarkers() {
     `;
 
     // Icono HTML
+    let gpsClass = '';
+    if (primerTipo === 'MOVIL') {
+      gpsClass = team.trackingActive ? 'gps-active' : 'gps-inactive';
+    }
     const tacticalIconHtml = `
-      <div class="tactical-marker-icon">
+      <div class="tactical-marker-icon team-icon ${gpsClass}">
         <div class="marker-pulse" style="background: ${colorHex}44;"></div>
         <div class="marker-pin" style="background: ${colorHex};"></div>
         <div class="marker-inner-icon" style="font-size:${tipos.length > 1 ? '0.65rem' : '1rem'};">${iconoEmoji}</div>
@@ -1244,7 +1284,53 @@ function setAdminAccess(granted) {
 }
 
 // Renderizar las listas dentro del panel de administración
+function renderTrackingPanel() {
+  const trackingList = document.getElementById('tracking-list');
+  const trackingEmpty = document.getElementById('tracking-empty');
+  if (!trackingList) return;
+
+  const movilTeams = appState.teams.filter(t => t.type === 'MOVIL');
+
+  if (movilTeams.length === 0) {
+    trackingList.innerHTML = '';
+    trackingEmpty.style.display = 'block';
+    return;
+  }
+
+  trackingEmpty.style.display = 'none';
+  trackingList.innerHTML = movilTeams.map(team => {
+    const isActive = team.trackingActive;
+    const lastUpdate = team.lastGpsUpdate || 'Sin datos';
+    const coords = team.lat && team.lng ? `${team.lat.toFixed(4)}, ${team.lng.toFixed(4)}` : 'Sin posición';
+
+    return `
+      <div class="admin-list-item" style="border: 1px solid ${isActive ? '#4caf50' : '#2a4a2a'}; background: ${isActive ? 'rgba(76,175,80,0.08)' : 'transparent'};">
+        <div class="admin-list-item-info" style="flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="admin-list-item-title">🚗 ${team.callsign}</span>
+            ${isActive ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;color:#4caf50;">
+              <span style="width:6px;height:6px;background:#4caf50;border-radius:50%;display:inline-block;animation:pulse 1s infinite;"></span>
+              GPS transmitiendo
+            </span>` : `<span style="font-size:0.75rem;color:#6a8a6a;">Sin rastreo</span>`}
+          </div>
+          <div style="font-size:0.85rem;color:#6a8a6a;margin-top:4px;">
+            ${isActive ? `Actualizado hace <span id="gps-time-${team.id}">ahora</span> · ` : ''}${coords}
+          </div>
+        </div>
+        <div class="admin-list-item-actions" style="gap:6px;">
+          ${isActive
+            ? `<button class="btn btn-sm" style="background:#3a1a1a;border-color:#bf4a4a;color:#bf4a4a;" onclick="stopGpsTracking('${team.id}')">⏹ Detener</button>`
+            : `<button class="btn btn-sm" style="background:#0d2a0d;border-color:#4caf50;color:#4caf50;" onclick="startGpsTracking('${team.id}')">▶ Iniciar</button>`
+          }
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderAdminLists() {
+  renderTrackingPanel();
+
   const adminTeams = document.getElementById('admin-teams-list');
   const adminEvents = document.getElementById('admin-events-list');
   const adminContacts = document.getElementById('admin-contacts-list');
@@ -1371,12 +1457,72 @@ function renderAdminLists() {
 
 // --- FORMULARIOS CRUD ---
 
+// --- EDITOR DE INSTRUCCIONES POR DÍA ---
+const NOTAS_COLORES = ['#d4af37', '#00b4d8', '#4caf50', '#ef5350', '#ab47bc'];
+
+function renderNotesEditor(notas) {
+  const container = document.getElementById('team-notes-editor');
+  if (!container) return;
+
+  let html = '';
+
+  // Compatibilidad: si notas es string legacy, mostrar bloque de solo lectura
+  if (typeof notas === 'string' && notas.trim()) {
+    html += `<div class="notes-legacy-block">
+      <div class="notes-legacy-label">Notas anteriores (migrar manualmente)</div>
+      <div class="notes-legacy-text">${notas}</div>
+    </div>`;
+  }
+
+  // Entradas estructuradas
+  const entries = Array.isArray(notas) ? notas : [];
+  entries.forEach((nota, i) => {
+    const color = NOTAS_COLORES[i % NOTAS_COLORES.length];
+    html += `<div class="notes-day-block" data-index="${i}" style="border-color:${color};">
+      <div class="notes-day-block__header">
+        <span class="notes-day-dot" style="background:${color};"></span>
+        <input type="date" class="notes-day-date" value="${nota.fecha || ''}" style="color:${color};">
+        <button type="button" class="notes-day-remove" onclick="removeNotasDia(${i})">✕</button>
+      </div>
+      <textarea class="notes-day-text">${nota.texto || ''}</textarea>
+    </div>`;
+  });
+
+  html += `<button type="button" class="btn-add-nota-dia" onclick="addNotasDia()">+ Añadir día</button>`;
+  container.innerHTML = html;
+}
+
+function leerNotasEditor() {
+  const blocks = document.querySelectorAll('#team-notes-editor .notes-day-block');
+  return Array.from(blocks)
+    .map(block => ({
+      fecha: block.querySelector('.notes-day-date').value,
+      texto: block.querySelector('.notes-day-text').value
+    }))
+    .filter(n => n.fecha || n.texto.trim())
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+window.addNotasDia = function() {
+  const current = leerNotasEditor();
+  current.push({ fecha: '', texto: '' });
+  renderNotesEditor(current);
+};
+
+window.removeNotasDia = function(idx) {
+  const current = leerNotasEditor();
+  current.splice(idx, 1);
+  renderNotesEditor(current);
+};
+
 // --- OPERACIONES DE EQUIPOS ---
 window.openAddTeamModal = function() {
   document.getElementById('form-team').reset();
   document.getElementById('team-id').value = '';
   document.getElementById('modal-team-title').textContent = 'Añadir Medio Aéreo / Equipo';
   actualizarDisplayCoordsEquipo();
+  attachTeamTypeListeners();
+  renderNotesEditor([]);
   openModal('modal-team');
 };
 
@@ -1387,23 +1533,70 @@ window.openEditTeamModal = function(id) {
   document.getElementById('team-id').value = team.id;
   document.getElementById('team-callsign').value = team.callsign;
   const tiposActivos = (team.type || '').split(',');
+  const isMOVIL = tiposActivos.includes('MOVIL');
+
   ['HELO', 'UAS', 'CUAS'].forEach(t => {
     const cb = document.getElementById(`team-type-${t.toLowerCase()}`);
-    if (cb) cb.checked = tiposActivos.includes(t);
+    if (cb) cb.checked = tiposActivos.includes(t) && !isMOVIL;
   });
+  const movilCb = document.getElementById('team-type-movil');
+  if (movilCb) movilCb.checked = isMOVIL;
+
   document.getElementById('team-sector').value = team.sector;
-  document.getElementById('team-lat').value = team.lat;
-  document.getElementById('team-lng').value = team.lng;
+  document.getElementById('team-lat').value = team.lat || '';
+  document.getElementById('team-lng').value = team.lng || '';
   document.getElementById('team-coords-input').value = (team.lat && team.lng) ? `${team.lat}, ${team.lng}` : '';
   actualizarDisplayCoordsEquipo();
   document.getElementById('team-officers').value = team.officers || '';
   document.getElementById('team-phone').value = team.phone || '';
   document.getElementById('team-freq').value = team.freq || '';
-  document.getElementById('team-notes').value = team.notes || '';
 
   document.getElementById('modal-team-title').textContent = 'Editar Medio Aéreo / Equipo';
+  attachTeamTypeListeners();
+  renderNotesEditor(team.notes || []);
   openModal('modal-team');
 };
+
+function attachTeamTypeListeners() {
+  const typeCheckboxes = ['team-type-helo', 'team-type-uas', 'team-type-cuas'];
+  const typeMovil = document.getElementById('team-type-movil');
+
+  typeCheckboxes.forEach(id => {
+    const cb = document.getElementById(id);
+    if (cb) {
+      cb.addEventListener('change', handleTeamTypeChange);
+    }
+  });
+
+  if (typeMovil) {
+    typeMovil.addEventListener('change', handleTeamTypeChange);
+  }
+
+  handleTeamTypeChange();
+}
+
+function handleTeamTypeChange() {
+  const typeCheckboxes = ['team-type-helo', 'team-type-uas', 'team-type-cuas'];
+  const typeMovil = document.getElementById('team-type-movil');
+  const movilInfo = document.getElementById('movil-info');
+  const anyOtherTypeChecked = typeCheckboxes.some(id => document.getElementById(id)?.checked);
+
+  if (typeMovil?.checked) {
+    // MOVIL seleccionado: deselecciona los demás tipos
+    typeCheckboxes.forEach(id => {
+      const cb = document.getElementById(id);
+      if (cb) cb.checked = false;
+    });
+    if (movilInfo) movilInfo.style.display = 'block';
+  } else if (anyOtherTypeChecked) {
+    // Algún otro tipo seleccionado: asegúrate de que MOVIL esté deseleccionado
+    if (typeMovil) typeMovil.checked = false;
+    if (movilInfo) movilInfo.style.display = 'none';
+  } else {
+    // Nada seleccionado: oculta el aviso
+    if (movilInfo) movilInfo.style.display = 'none';
+  }
+}
 
 // Parsear coordenadas escritas a mano: admite "[40.4898, -3.5918]", "40.4898, -3.5918" o "40.4898 -3.5918"
 function parsearCoordenadasEquipo(texto) {
@@ -1435,18 +1628,43 @@ window.saveTeam = function() {
 
   if (!form.reportValidity()) return;
 
-  const lat = normalizarInputCoordenada('team-lat');
-  const lng = normalizarInputCoordenada('team-lng');
-  if (isNaN(lat) || isNaN(lng)) {
-    showToast("Formato de coordenadas no reconocido. Usa decimal (28.1003) o grados (28°6'1.4\"N).", "danger");
-    return;
+  // Comprobar si es tipo MOVIL (exclusivo)
+  const isMOVIL = document.getElementById('team-type-movil')?.checked;
+
+  let lat = null, lng = null;
+  if (!isMOVIL) {
+    // Para tipos no-MOVIL, las coordenadas son obligatorias
+    lat = normalizarInputCoordenada('team-lat');
+    lng = normalizarInputCoordenada('team-lng');
+    if (isNaN(lat) || isNaN(lng)) {
+      showToast("Formato de coordenadas no reconocido. Usa decimal (28.1003) o grados (28°6'1.4\"N).", "danger");
+      return;
+    }
+  } else {
+    // Para MOVIL, las coordenadas son opcionales (llegarán por GPS)
+    const latStr = document.getElementById('team-lat').value.trim();
+    const lngStr = document.getElementById('team-lng').value.trim();
+    if (latStr && lngStr) {
+      lat = normalizarInputCoordenada('team-lat');
+      lng = normalizarInputCoordenada('team-lng');
+      if (isNaN(lat) || isNaN(lng)) {
+        showToast("Formato de coordenadas no válido", "danger");
+        return;
+      }
+    }
   }
 
-  const tipos = ['HELO', 'UAS', 'CUAS'].filter(t =>
-    document.getElementById(`team-type-${t.toLowerCase()}`)?.checked
-  );
+  let tipos;
+  if (isMOVIL) {
+    tipos = ['MOVIL'];
+  } else {
+    tipos = ['HELO', 'UAS', 'CUAS'].filter(t =>
+      document.getElementById(`team-type-${t.toLowerCase()}`)?.checked
+    );
+  }
+
   if (tipos.length === 0) {
-    showToast("Selecciona al menos un tipo de medio.", "warning");
+    showToast("Selecciona un tipo de medio.", "warning");
     return;
   }
 
@@ -1460,8 +1678,14 @@ window.saveTeam = function() {
     officers: document.getElementById('team-officers').value,
     phone: document.getElementById('team-phone').value,
     freq: document.getElementById('team-freq').value,
-    notes: document.getElementById('team-notes').value
+    notes: leerNotasEditor()
   };
+
+  // Inicializar campos de rastreo GPS para equipos MOVIL
+  if (isMOVIL) {
+    teamData.trackingActive = false;
+    teamData.lastGpsUpdate = null;
+  }
 
   if (appState.firebaseEnabled) {
     const col = appState.db.collection('equipos');
@@ -1493,6 +1717,104 @@ window.saveTeam = function() {
     showToast("Equipo guardado localmente", "success");
     closeModal('modal-team');
   }
+};
+
+// --- RASTREO GPS PARA EQUIPOS MOVIL ---
+let activeWatchId = null;
+let activeTeamId = null;
+
+window.startGpsTracking = function(teamId) {
+  const team = appState.teams.find(t => t.id === teamId);
+  if (!team || team.type !== 'MOVIL') return;
+
+  // Detener rastreo anterior si existe
+  if (activeWatchId !== null) {
+    navigator.geolocation.clearWatch(activeWatchId);
+    activeWatchId = null;
+  }
+
+  activeTeamId = teamId;
+
+  if (!navigator.geolocation) {
+    showToast("Geolocalización no disponible en este navegador", "danger");
+    return;
+  }
+
+  activeWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const now = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      // Actualizar en Firestore
+      if (appState.firebaseEnabled) {
+        appState.db.collection('equipos').doc(teamId).update({
+          lat,
+          lng,
+          trackingActive: true,
+          lastGpsUpdate: now
+        }).catch(err => {
+          console.error('Error actualizando GPS:', err);
+        });
+      } else {
+        // Local
+        const teamIdx = appState.teams.findIndex(t => t.id === teamId);
+        if (teamIdx !== -1) {
+          appState.teams[teamIdx].lat = lat;
+          appState.teams[teamIdx].lng = lng;
+          appState.teams[teamIdx].trackingActive = true;
+          appState.teams[teamIdx].lastGpsUpdate = now;
+          saveLocalData('teams');
+        }
+      }
+    },
+    err => {
+      console.error('Error GPS:', err);
+      if (err.code === 1) {
+        showToast("Permiso de geolocalización denegado. Actívalo en la configuración del navegador.", "danger");
+      } else {
+        showToast("Error al obtener la posición GPS: " + err.message, "danger");
+      }
+      activeWatchId = null;
+      activeTeamId = null;
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    }
+  );
+
+  showToast("Rastreo GPS iniciado para " + team.callsign, "success");
+};
+
+window.stopGpsTracking = function(teamId) {
+  const team = appState.teams.find(t => t.id === teamId);
+  if (!team || team.type !== 'MOVIL') return;
+
+  if (activeWatchId !== null && activeTeamId === teamId) {
+    navigator.geolocation.clearWatch(activeWatchId);
+    activeWatchId = null;
+    activeTeamId = null;
+  }
+
+  // Actualizar en Firestore/Local
+  if (appState.firebaseEnabled) {
+    appState.db.collection('equipos').doc(teamId).update({
+      trackingActive: false
+    }).catch(err => {
+      console.error('Error deteniendo rastreo:', err);
+    });
+  } else {
+    // Local
+    const teamIdx = appState.teams.findIndex(t => t.id === teamId);
+    if (teamIdx !== -1) {
+      appState.teams[teamIdx].trackingActive = false;
+      saveLocalData('teams');
+    }
+  }
+
+  showToast("Rastreo GPS detenido para " + team.callsign, "info");
 };
 
 // --- OPERACIONES DE EVENTOS ---

@@ -250,6 +250,19 @@
             <button class="btn btn-sm btn-danger" id="admin-logout-btn" style="width: auto; margin-left: auto;">Cerrar Panel</button>
           </div>
 
+          <!-- Sección: Rastreo GPS -->
+          <div class="admin-section" id="tracking-section">
+            <div class="admin-section-header">
+              <h3 class="admin-section-title">📡 Rastreo GPS</h3>
+            </div>
+            <div id="tracking-list" class="admin-list">
+              <!-- Dinámico: equipos MOVIL -->
+            </div>
+            <div id="tracking-empty" style="padding:12px; color:var(--text-secondary); text-align:center; font-size:0.9rem;">
+              No hay equipos móviles configurados
+            </div>
+          </div>
+
           <div class="admin-sections">
             <!-- Sección: Equipos -->
             <div class="admin-section">
@@ -427,6 +440,13 @@
                   <input type="checkbox" id="team-type-cuas" value="CUAS"> 🛡️ Inhibición (C-UAS)
                 </label>
               </div>
+                <label class="type-check-label">
+                  <input type="radio" id="team-type-movil" name="team-type-group" value="MOVIL"> 🚗 Equipo Móvil (MOVIL)
+                </label>
+              </div>
+              <div id="movil-info" style="display:none; background:#0d2a1a; border:1px solid #2a5a2a; border-radius:6px; padding:8px; margin-top:8px; font-size:0.9rem; color:#6abf8a;">
+                📡 Equipo móvil — las coordenadas se actualizarán automáticamente por GPS cuando se active el rastreo. Puedes dejar las coordenadas en blanco.
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label" for="team-sector">Sector / Ubicación</label>
@@ -442,7 +462,7 @@
               <span style="display:block; font-size:0.78rem; color:var(--text-secondary); margin-top:5px;">Escribe lat, lng (p. ej. 40.4898, -3.5918) y al guardar se colocará el icono en el mapa, sin necesidad de elegir el punto manualmente.</span>
             </div>
           </div>
-          <input type="hidden" id="team-lat" required>
+          <input type="hidden" id="team-lat">
           <input type="hidden" id="team-lng">
           <div class="form-group">
             <label class="form-label">Posición en el mapa</label>
@@ -473,8 +493,8 @@
             <input type="text" id="team-freq" class="form-input" placeholder="Ej. CANAL 12, GRP_AER_1">
           </div>
           <div class="form-group">
-            <label class="form-label" for="team-notes">Instrucciones Operativas / Notas</label>
-            <textarea id="team-notes" class="form-textarea" rows="3" placeholder="Restricciones de vuelo, frecuencias auxiliares, etc."></textarea>
+            <label class="form-label">Instrucciones Operativas por Dia</label>
+            <div id="team-notes-editor"></div>
           </div>
         </form>
       </div>
