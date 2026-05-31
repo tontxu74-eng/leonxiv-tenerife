@@ -1193,6 +1193,9 @@ html {
   box-shadow: 0 10px 40px rgba(0,0,0,0.8);
   animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modalSlide {
@@ -1230,7 +1233,8 @@ html {
 
 .modal-body {
   padding: 20px;
-  max-height: 70vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 

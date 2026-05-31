@@ -516,6 +516,7 @@ function initMap() {
     if (teamBanner && teamBanner.style.display === 'flex') {
       document.getElementById('team-lat').value = lat;
       document.getElementById('team-lng').value = lng;
+      document.getElementById('team-coords-input').value = `${lat}, ${lng}`;
       L.circleMarker([parseFloat(lat), parseFloat(lng)], {
         radius: 7, color: 'hsl(var(--gold-papal))', fillColor: 'hsl(var(--gold-papal))', fillOpacity: 0.9, weight: 2
       }).addTo(appState.map).bindTooltip('Posición equipo', { permanent: true, direction: 'top', offset: [0, -10] });
@@ -567,6 +568,8 @@ function initMap() {
     if (modalTeam && modalTeam.classList.contains('active')) {
       document.getElementById('team-lat').value = lat;
       document.getElementById('team-lng').value = lng;
+      document.getElementById('team-coords-input').value = `${lat}, ${lng}`;
+      actualizarDisplayCoordsEquipo();
       showToast(`📍 Coordenadas fijadas en Equipo: ${lat}, ${lng}`, "info");
     } else if (appState.isAdmin) {
       if (navigator.clipboard) {
@@ -1545,7 +1548,9 @@ window.openEditTeamModal = function(id) {
   document.getElementById('team-sector').value = team.sector;
   document.getElementById('team-lat').value = team.lat || '';
   document.getElementById('team-lng').value = team.lng || '';
-  document.getElementById('team-coords-input').value = (team.lat && team.lng) ? `${team.lat}, ${team.lng}` : '';
+  document.getElementById('team-coords-input').value = (team.lat != null && team.lng != null && team.lat !== '' && team.lng !== '')
+    ? `${parseFloat(team.lat).toFixed(6)}, ${parseFloat(team.lng).toFixed(6)}`
+    : '';
   actualizarDisplayCoordsEquipo();
   document.getElementById('team-officers').value = team.officers || '';
   document.getElementById('team-phone').value = team.phone || '';
@@ -1564,11 +1569,13 @@ function attachTeamTypeListeners() {
   typeCheckboxes.forEach(id => {
     const cb = document.getElementById(id);
     if (cb) {
+      cb.removeEventListener('change', handleTeamTypeChange);
       cb.addEventListener('change', handleTeamTypeChange);
     }
   });
 
   if (typeMovil) {
+    typeMovil.removeEventListener('change', handleTeamTypeChange);
     typeMovil.addEventListener('change', handleTeamTypeChange);
   }
 
@@ -1608,6 +1615,12 @@ function parsearCoordenadasEquipo(texto) {
   const lng = parseFloat(partes[1]);
   if (isNaN(lat) || isNaN(lng)) return null;
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  // Detectar posible notación decimal española: "40,3" → se trataría como lat=40, lng=3
+  // pero probablemente el usuario quiso escribir el decimal 40.3
+  // Señal de alerta: ambas partes son enteros positivos y la segunda parte tiene ≤3 dígitos
+  const ambas_enteras_positivas = !partes[0].includes('.') && !partes[1].includes('.') &&
+                                   !partes[0].startsWith('-') && !partes[1].startsWith('-');
+  if (ambas_enteras_positivas && partes[1].length <= 3) return null;
   return { lat, lng };
 }
 
@@ -1619,7 +1632,7 @@ window.saveTeam = function() {
   if (coordsManual) {
     const c = parsearCoordenadasEquipo(coordsManual);
     if (!c) {
-      showToast("Coordenadas no válidas. Usa el formato: 40.4898, -3.5918", "danger");
+      showToast("Coordenadas no válidas. Usa punto decimal: 40.4898, -3.5918 (no coma)", "danger");
       return;
     }
     document.getElementById('team-lat').value = c.lat;
@@ -2394,7 +2407,10 @@ window.getCurrentCoordinatesInForm = function(latInputId, lngInputId) {
     (position) => {
       document.getElementById(latInputId).value = position.coords.latitude;
       document.getElementById(lngInputId).value = position.coords.longitude;
-      if (latInputId === 'team-lat') actualizarDisplayCoordsEquipo();
+      if (latInputId === 'team-lat') {
+        document.getElementById('team-coords-input').value = `${position.coords.latitude}, ${position.coords.longitude}`;
+        actualizarDisplayCoordsEquipo();
+      }
       showToast("Coordenadas GPS obtenidas correctamente", "success");
     },
     (error) => {
