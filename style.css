@@ -17,6 +17,7 @@
   --police-blue-hover: 217, 91%, 50%;
   --gold-papal: 45, 93%, 47%;    /* #d97706 (Dorado Vaticano/SS León XIV) */
   --gold-papal-hover: 45, 93%, 37%;
+  --helo-cyan: 189, 95%, 43%;    /* #06b6d4 (Cian - Helicópteros HELO, para no confundir con el dorado VIP) */
   --success: 142, 71%, 45%;      /* #10b981 (Disponible / Seguro) */
   --danger: 0, 84%, 60%;         /* #ef4444 (Restringido / C-UAS Activo) */
   --warning: 38, 92%, 50%;       /* #f59e0b (Alerta / En Operación) */
@@ -356,6 +357,7 @@ html {
 .badge-gold { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
 .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
 .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-cyan { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
 
 /* --- Pestaña: Dashboard / Inicio --- */
 .dashboard-grid {

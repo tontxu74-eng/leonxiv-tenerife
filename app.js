@@ -649,14 +649,14 @@ function updateMapMarkers() {
       iconoEmoji = '🚗';
     } else {
       primerTipo = tipos.includes('HELO') ? 'HELO' : (tipos.includes('CUAS') ? 'CUAS' : 'UAS');
-      colorHex = primerTipo === 'HELO' ? 'hsl(var(--gold-papal))' : (primerTipo === 'CUAS' ? 'hsl(var(--danger))' : 'hsl(var(--police-blue))');
+      colorHex = primerTipo === 'HELO' ? 'hsl(var(--helo-cyan))' : (primerTipo === 'CUAS' ? 'hsl(var(--danger))' : 'hsl(var(--police-blue))');
       iconoEmoji = tipos.map(t => t === 'HELO' ? '🚁' : (t === 'CUAS' ? '🛡️' : '🛸')).join('');
     }
 
     const badgesPopup = tipos.map(t => {
       let cl;
       if (t === 'MOVIL') cl = 'badge-green';
-      else if (t === 'HELO') cl = 'badge-gold';
+      else if (t === 'HELO') cl = 'badge-cyan';
       else if (t === 'CUAS') cl = 'badge-red';
       else cl = 'badge-blue';
       return `<span class="badge ${cl}">${t}</span>`;
@@ -936,7 +936,7 @@ function renderTeams() {
     const lng = parseFloat(team.lng);
     const tipos = (team.type || 'UAS').split(',');
     const iconMap = { HELO: '🚁', UAS: '🛸', CUAS: '🛡️' };
-    const classMap = { HELO: 'badge-gold', UAS: 'badge-blue', CUAS: 'badge-red' };
+    const classMap = { HELO: 'badge-cyan', UAS: 'badge-blue', CUAS: 'badge-red' };
     const icono = tipos.map(t => iconMap[t] || '📡').join('');
     const badges = tipos.map(t => `<span class="badge ${classMap[t] || 'badge-blue'}">${t}</span>`).join(' ');
 
