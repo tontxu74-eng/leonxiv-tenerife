@@ -2472,104 +2472,196 @@ window.showToast = function(message, type = 'info') {
 
 // --- IMPORTAR / EXPORTAR JSON (Backup de Despliegue) ---
 
-// Exportar plan a JSON
+// Relación entre colección de Firestore y su clave en appState.
+// Es la fuente única de verdad: qué se exporta y qué se restaura.
+const BACKUP_COLLECTIONS = [
+  { col: 'equipos',     key: 'teams' },
+  { col: 'eventos',     key: 'events' },
+  { col: 'contactos',   key: 'contacts' },
+  { col: 'ubicaciones', key: 'locations' },
+  { col: 'itinerarios', key: 'routes' },
+  { col: 'canales',     key: 'channels' }
+];
+
+// Devuelve el projectId de la base realmente conectada (marca de ciudad).
+// Si no está disponible, recurre a la constante de configuración.
+function getConnectedProjectId() {
+  try {
+    return (appState.db && appState.db.app && appState.db.app.options &&
+            appState.db.app.options.projectId) || FIREBASE_CONFIG.projectId;
+  } catch (e) {
+    return FIREBASE_CONFIG.projectId;
+  }
+}
+
+// Lee un archivo como texto usando FileReader (compatibilidad amplia).
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (evt) => resolve(evt.target.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
+// Exportar plan COMPLETO a JSON (las 6 colecciones + metadatos de control)
 function exportDeploymentPlan() {
+  const projectId = getConnectedProjectId();
   const exportData = {
+    schemaVersion: 2,
+    projectId: projectId,
+    exportDate: new Date().toISOString(),
+    unit: "Unidad Aérea de la Policía",
+    event: "Visita SS León XIV",
     teams: appState.teams,
     events: appState.events,
     contacts: appState.contacts,
-    exportDate: new Date().toISOString(),
-    unit: "Unidad Aérea de la Policía",
-    event: "Visita SS León XIV"
+    locations: appState.locations,
+    routes: appState.routes,
+    channels: appState.channels
   };
 
   const jsonStr = JSON.stringify(exportData, null, 2);
   const blob = new Blob([jsonStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  
+
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Despliegue_Aereo_LEON_XIV_${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `Backup_${projectId}_${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  
-  showToast("Plan de despliegue exportado correctamente", "success");
+
+  showToast("Copia de seguridad completa exportada correctamente", "success");
 }
 
-// Importar plan desde JSON
-function importDeploymentPlan(e) {
+// Reemplazo total de una colección de Firestore: borra todos sus documentos
+// y escribe los del backup preservando los IDs originales. Trocea en lotes
+// de 500 operaciones (límite de Firestore).
+async function replaceFirestoreCollection(collectionName, items) {
+  const colRef = appState.db.collection(collectionName);
+
+  // 1. Borrar todo lo existente, en lotes de 500
+  const snapshot = await colRef.get();
+  let batch = appState.db.batch();
+  let opCount = 0;
+  for (const docSnap of snapshot.docs) {
+    batch.delete(docSnap.ref);
+    opCount++;
+    if (opCount === 500) {
+      await batch.commit();
+      batch = appState.db.batch();
+      opCount = 0;
+    }
+  }
+  if (opCount > 0) await batch.commit();
+
+  // 2. Escribir los nuevos, preservando IDs, en lotes de 500
+  batch = appState.db.batch();
+  opCount = 0;
+  for (const item of items) {
+    const data = { ...item };
+    const id = data.id;
+    delete data.id; // el id es el identificador del documento, no un campo
+    const docRef = id ? colRef.doc(String(id)) : colRef.doc();
+    batch.set(docRef, data);
+    opCount++;
+    if (opCount === 500) {
+      await batch.commit();
+      batch = appState.db.batch();
+      opCount = 0;
+    }
+  }
+  if (opCount > 0) await batch.commit();
+}
+
+// Importar plan desde JSON: restauración fiel por reemplazo total
+async function importDeploymentPlan(e) {
   const file = e.target.files[0];
   if (!file) return;
+  e.target.value = ''; // limpiar el input cuanto antes
 
-  const reader = new FileReader();
-  reader.onload = function(evt) {
+  // 1. Leer y parsear
+  let data;
+  try {
+    data = JSON.parse(await readFileAsText(file));
+  } catch (err) {
+    console.error(err);
+    showToast("Error al leer archivo JSON: Formato incorrecto", "danger");
+    return;
+  }
+
+  // 2. Determinar qué colecciones del backup están presentes
+  const presentes = BACKUP_COLLECTIONS.filter(c => Array.isArray(data[c.key]));
+  if (presentes.length === 0) {
+    showToast("Formato de copia de seguridad no válido.", "danger");
+    return;
+  }
+
+  // 3. Salvaguarda anti-cruce: verificar ciudad/base de origen
+  const destino = getConnectedProjectId();
+  const origen = data.projectId || null;
+  if (origen && origen !== destino) {
+    const okOrigen = confirm(
+      `⚠️ AVISO: el archivo pertenece a OTRA base de datos.\n\n` +
+      `Origen del archivo: ${origen}\n` +
+      `Base actual:        ${destino}\n\n` +
+      `Restaurar mezclaría datos de ciudades distintas.\n` +
+      `¿Seguro que quieres continuar?`
+    );
+    if (!okOrigen) { showToast("Importación cancelada", "warning"); return; }
+  } else if (!origen) {
+    const okAntiguo = confirm(
+      `Este archivo no indica su ciudad de origen (copia antigua).\n` +
+      `Base actual: ${destino}\n\n` +
+      `Asegúrate de que corresponde a esta ciudad.\n¿Continuar?`
+    );
+    if (!okAntiguo) { showToast("Importación cancelada", "warning"); return; }
+  }
+
+  // 4. Resumen + primera confirmación
+  const resumen = presentes.map(c => `- ${data[c.key].length} ${c.key}`).join('\n');
+  const ausentes = BACKUP_COLLECTIONS.filter(c => !Array.isArray(data[c.key]));
+  const textoAusentes = ausentes.length
+    ? `\n\nNO incluidas en el archivo (se conservan intactas):\n` +
+      ausentes.map(c => `- ${c.key}`).join('\n')
+    : '';
+
+  const ok1 = confirm(
+    `Se va a RESTAURAR (reemplazo total) en: ${destino}\n\n` +
+    `Se reemplazarán por completo:\n${resumen}` +
+    textoAusentes +
+    `\n\n⚠️ Esto BORRA los datos actuales de esas colecciones y los sustituye ` +
+    `por los del archivo.\n¿Deseas continuar?`
+  );
+  if (!ok1) { showToast("Importación cancelada", "warning"); return; }
+
+  // 5. Segunda confirmación (borrado masivo)
+  const ok2 = confirm(
+    `Confirmación final.\n\nVas a borrar y reemplazar los datos de ${destino}.\n` +
+    `Esta acción no se puede deshacer.\n\n¿Continuar con la restauración?`
+  );
+  if (!ok2) { showToast("Importación cancelada", "warning"); return; }
+
+  // 6. Ejecutar
+  if (appState.firebaseEnabled) {
+    showToast("Restaurando copia en la nube. Por favor, espere...", "info");
     try {
-      const data = JSON.parse(evt.target.result);
-      if (!data.teams || !data.events || !data.contacts) {
-        throw new Error("Formato de JSON de despliegue no válido.");
+      for (const c of presentes) {
+        await replaceFirestoreCollection(c.col, data[c.key]);
       }
-
-      if (confirm(`Se van a importar:\n- ${data.teams.length} Equipos\n- ${data.events.length} Eventos\n- ${data.contacts.length} Contactos\n\n¿Desea continuar? Esto reemplazará los datos existentes.`)) {
-        
-        if (appState.firebaseEnabled) {
-          // Si Firebase está activo, limpiamos colecciones y cargamos las nuevas en lotes
-          showToast("Importando datos en la nube. Por favor, espere...", "info");
-          
-          // Nota: El borrado completo en producción se haría por backend, aquí lo hacemos limpiando
-          // Pero para evitar colapso de borrado masivo, agregamos los nuevos elementos.
-          // Para esta escala, hacemos importación agregando o reemplazando por lote
-          const batch = appState.db.batch();
-          
-          // Importar Equipos
-          data.teams.forEach(t => {
-            const cleanT = { ...t };
-            delete cleanT.id;
-            batch.set(appState.db.collection('equipos').doc(), cleanT);
-          });
-          
-          // Importar Eventos
-          data.events.forEach(ev => {
-            const cleanEv = { ...ev };
-            delete cleanEv.id;
-            batch.set(appState.db.collection('eventos').doc(), cleanEv);
-          });
-
-          // Importar Contactos
-          data.contacts.forEach(c => {
-            const cleanC = { ...c };
-            delete cleanC.id;
-            batch.set(appState.db.collection('contactos').doc(), cleanC);
-          });
-
-          batch.commit().then(() => {
-            showToast("Plan importado y sincronizado con éxito", "success");
-          }).catch(err => {
-            console.error(err);
-            showToast("Error al importar datos en Firebase", "danger");
-          });
-
-        } else {
-          // Local storage
-          appState.teams = data.teams;
-          appState.events = data.events;
-          appState.contacts = data.contacts;
-          
-          saveLocalData('teams');
-          saveLocalData('events');
-          saveLocalData('contacts');
-          
-          showToast("Plan importado localmente con éxito", "success");
-        }
-      }
+      showToast("Copia restaurada y sincronizada con éxito", "success");
     } catch (err) {
       console.error(err);
-      showToast("Error al leer archivo JSON: Formato incorrecto", "danger");
+      showToast("Error al restaurar datos en Firebase", "danger");
     }
-  };
-  reader.readAsText(file);
-  e.target.value = ''; // Limpiar input file
+  } else {
+    // Local: reemplazar solo las colecciones presentes y persistir todo
+    presentes.forEach(c => { appState[c.key] = data[c.key]; });
+    saveLocalData();
+    showToast("Copia restaurada localmente con éxito", "success");
+  }
 }
 
 // --- OPERACIONES DE CANALES Y FRECUENCIAS ---
