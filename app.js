@@ -589,13 +589,30 @@ function notasCardHtml(notes) {
         : '—';
       return `<div style="border-left:3px solid ${color};padding:4px 7px;border-radius:3px;background:${color}18;margin-bottom:3px;">` +
         `<div style="color:${color};font-size:0.8rem;font-weight:bold;">📅 ${fechaStr}</div>` +
-        `<div style="font-size:0.85rem;color:var(--text-secondary);margin-top:1px;">${n.texto}</div></div>`;
+        `<div style="font-size:0.85rem;color:var(--text-secondary);margin-top:1px;">${escapeHtml(n.texto || '')}</div></div>`;
     }).join('');
   }
   if (typeof notes === 'string' && notes.trim()) {
     return `<div style="font-style:italic;font-size:0.85rem;color:var(--text-secondary);">${notes}</div>`;
   }
   return '';
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatDescripcion(texto) {
+  if (!texto) return '';
+  return texto.split(/\r?\n/)
+    .filter(l => l.trim())
+    .map(l => `<p style="margin:0 0 4px 0;">${escapeHtml(l)}</p>`)
+    .join('');
 }
 
 function notasPopupHtml(team) {
@@ -607,7 +624,7 @@ function notasPopupHtml(team) {
         : '—';
       return `<div style="border-left:3px solid ${color};padding:4px 7px;border-radius:3px;background:${color}18;margin-bottom:3px;">` +
         `<div style="color:${color};font-size:0.8rem;font-weight:bold;">📅 ${fechaStr}</div>` +
-        `<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:1px;">${n.texto}</div></div>`;
+        `<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:1px;">${escapeHtml(n.texto || '')}</div></div>`;
     }).join('');
     return `<div style="margin-top:6px;border-top:1px solid var(--border-color);padding-top:6px;">${blocks}</div>`;
   }
@@ -672,7 +689,7 @@ function updateMapMarkers() {
         <div class="map-popup-body">
           <strong>Sector:</strong> ${team.sector}<br>
           ${team.officers ? `<strong>Dotación:</strong> ${team.officers}<br>` : ''}
-          ${team.phone ? `<strong>Tlf:</strong> <a href="tel:${team.phone}" style="color: hsl(var(--police-blue)); font-weight: 600;">${team.phone}</a><br>` : ''}
+          ${team.phone ? `<strong>Tlf:</strong> <a href="tel:${escapeHtml(team.phone)}" style="color: hsl(var(--police-blue)); font-weight: 600;">${escapeHtml(team.phone)}</a><br>` : ''}
           <strong>Radio:</strong> ${team.freq || 'Sin asignar'}<br>
           ${primerTipo === 'MOVIL' && team.lastGpsUpdate ? `<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: #4caf50;">📡 Última pos. GPS: ${team.lastGpsUpdate}</div>` : ''}
           ${notasPopupHtml(team)}
@@ -800,7 +817,7 @@ function updateMapOverlays() {
           <span class="map-popup-title">${loc.name}</span>
           <span class="badge ${badgeClass}">${loc.type}</span>
         </div>
-        <div class="map-popup-body">${loc.desc || ''}</div>
+        <div class="map-popup-body">${formatDescripcion(loc.desc)}${notasPopupHtml(loc)}</div>
         <div class="map-popup-footer">
           <button class="btn btn-sm" onclick="navigateTo(${lat},${lng})" style="font-size:0.75rem; min-height:32px; padding:4px 10px;">
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2a8 8 0 00-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 00-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -962,6 +979,11 @@ function renderTeams() {
             <div class="team-info-label">Dotación Policial</div>
             <div class="team-info-val">${team.officers || 'Sin asignar'}</div>
           </div>
+          ${team.phone ? `
+          <div style="grid-column: span 2; margin-top: 6px;">
+            <div class="team-info-label">Teléfono</div>
+            <div class="team-info-val">${escapeHtml(team.phone)}</div>
+          </div>` : ''}
           ${(Array.isArray(team.notes) ? team.notes.length > 0 : !!team.notes) ? `
           <div style="grid-column: span 2; margin-top: 6px; border-top: 1px dashed var(--border-color); padding-top: 6px;">
             <div class="team-info-label">Instrucciones Operativas</div>
@@ -970,7 +992,7 @@ function renderTeams() {
         </div>
         <div class="team-actions">
           ${team.phone ? `
-          <a href="tel:${team.phone}" class="btn btn-secondary btn-sm" style="flex: 1;">
+          <a href="tel:${escapeHtml(team.phone)}" class="btn btn-secondary btn-sm" style="flex: 1;">
             📞 Llamar
           </a>` : ''}
           <button class="btn btn-sm" onclick="navigateTo(${lat}, ${lng})" style="flex: 1.5;">
@@ -1491,7 +1513,7 @@ function renderNotesEditor(notas) {
   if (typeof notas === 'string' && notas.trim()) {
     html += `<div class="notes-legacy-block">
       <div class="notes-legacy-label">Notas anteriores (migrar manualmente)</div>
-      <div class="notes-legacy-text">${notas}</div>
+      <div class="notes-legacy-text">${escapeHtml(notas)}</div>
     </div>`;
   }
 
@@ -2130,12 +2152,69 @@ window.calcularRutaAutomatica = async function() {
   }
 };
 
+// --- EDITOR DE INSTRUCCIONES POR DÍA (UBICACIONES) ---
+
+function renderLocationNotesEditor(notas) {
+  const container = document.getElementById('location-notes-editor');
+  if (!container) return;
+
+  let html = '';
+
+  // Compatibilidad: si notas es string legacy, mostrar bloque de solo lectura
+  if (typeof notas === 'string' && notas.trim()) {
+    html += `<div class="notes-legacy-block">
+      <div class="notes-legacy-label">Notas anteriores (migrar manualmente)</div>
+      <div class="notes-legacy-text">${escapeHtml(notas)}</div>
+    </div>`;
+  }
+
+  const entries = Array.isArray(notas) ? notas : [];
+  entries.forEach((nota, i) => {
+    const color = NOTAS_COLORES[i % NOTAS_COLORES.length];
+    html += `<div class="notes-day-block" data-index="${i}" style="border-color:${color};">
+      <div class="notes-day-block__header">
+        <span class="notes-day-dot" style="background:${color};"></span>
+        <input type="date" class="notes-day-date" value="${nota.fecha || ''}" style="color:${color};">
+        <button type="button" class="notes-day-remove" onclick="removeLocationNotasDia(${i})">✕</button>
+      </div>
+      <textarea class="notes-day-text">${nota.texto || ''}</textarea>
+    </div>`;
+  });
+
+  html += `<button type="button" class="btn-add-nota-dia" onclick="addLocationNotasDia()">+ Añadir día</button>`;
+  container.innerHTML = html;
+}
+
+function leerLocationNotesEditor() {
+  const blocks = document.querySelectorAll('#location-notes-editor .notes-day-block');
+  return Array.from(blocks)
+    .map(block => ({
+      fecha: block.querySelector('.notes-day-date').value,
+      texto: block.querySelector('.notes-day-text').value
+    }))
+    .filter(n => n.fecha || n.texto.trim())
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+window.addLocationNotasDia = function() {
+  const current = leerLocationNotesEditor();
+  current.push({ fecha: '', texto: '' });
+  renderLocationNotesEditor(current);
+};
+
+window.removeLocationNotasDia = function(idx) {
+  const current = leerLocationNotesEditor();
+  current.splice(idx, 1);
+  renderLocationNotesEditor(current);
+};
+
 // --- OPERACIONES DE UBICACIONES ---
 
 window.openAddLocationModal = function() {
   document.getElementById('form-location').reset();
   document.getElementById('location-id').value = '';
   document.getElementById('modal-location-title').textContent = 'Añadir Ubicación';
+  renderLocationNotesEditor([]);
   openModal('modal-location');
 };
 
@@ -2149,6 +2228,7 @@ window.openEditLocationModal = function(id) {
   document.getElementById('location-lng').value = loc.lng;
   document.getElementById('location-desc').value = loc.desc || '';
   document.getElementById('modal-location-title').textContent = 'Editar Ubicación';
+  renderLocationNotesEditor(loc.notes || []);
   openModal('modal-location');
 };
 
@@ -2168,7 +2248,8 @@ window.saveLocation = function() {
     name: document.getElementById('location-name').value,
     type: document.getElementById('location-type').value,
     lat, lng,
-    desc: document.getElementById('location-desc').value
+    desc: document.getElementById('location-desc').value,
+    notes: leerLocationNotesEditor()
   };
 
   if (appState.firebaseEnabled) {
