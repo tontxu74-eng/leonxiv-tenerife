@@ -634,6 +634,17 @@ function notasPopupHtml(team) {
   return '';
 }
 
+function telefonosPopupHtml(team) {
+  const phones = (team.phones && team.phones.length)
+    ? team.phones
+    : (team.phone ? [team.phone] : []);
+  if (!phones.length) return '';
+  return phones.map((p, i) =>
+    `<strong>Tlf${phones.length > 1 ? ' ' + (i + 1) : ''}:</strong> ` +
+    `<a href="tel:${escapeHtml(p)}" style="color:hsl(var(--police-blue));font-weight:600;">${escapeHtml(p)}</a><br>`
+  ).join('');
+}
+
 // Actualizar marcadores tácticos en el mapa
 function updateMapMarkers() {
   if (!appState.map) return;
@@ -689,7 +700,7 @@ function updateMapMarkers() {
         <div class="map-popup-body">
           <strong>Sector:</strong> ${team.sector}<br>
           ${team.officers ? `<strong>Dotación:</strong> ${team.officers}<br>` : ''}
-          ${team.phone ? `<strong>Tlf:</strong> <a href="tel:${escapeHtml(team.phone)}" style="color: hsl(var(--police-blue)); font-weight: 600;">${escapeHtml(team.phone)}</a><br>` : ''}
+          ${telefonosPopupHtml(team)}
           <strong>Radio:</strong> ${team.freq || 'Sin asignar'}<br>
           ${primerTipo === 'MOVIL' && team.lastGpsUpdate ? `<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: #4caf50;">📡 Última pos. GPS: ${team.lastGpsUpdate}</div>` : ''}
           ${notasPopupHtml(team)}
@@ -772,7 +783,10 @@ function htmlEquiposCercanos(lat, lng, radioKm = 2.0) {
         <span style="display:block; font-size:0.73rem; color:hsl(var(--text-muted));">${t.sector}</span>
       </div>
       <div style="display:flex; gap:6px; flex-shrink:0; margin-left:8px;">
-        ${t.phone ? `<a href="tel:${t.phone}" class="btn btn-sm btn-secondary" style="font-size:0.72rem; padding:3px 8px; min-height:unset;">📞</a>` : ''}
+        ${(() => {
+          const _tel = (t.phones && t.phones.length) ? t.phones[0] : (t.phone || '');
+          return _tel ? `<a href="tel:${escapeHtml(_tel)}" class="btn btn-sm btn-secondary" style="font-size:0.72rem; padding:3px 8px; min-height:unset;">📞</a>` : '';
+        })()}
         <button class="btn btn-sm" onclick="navigateTo(${parseFloat(t.lat)},${parseFloat(t.lng)})" style="font-size:0.72rem; padding:3px 8px; min-height:unset;">📍</button>
       </div>
     </div>`).join('');
@@ -979,11 +993,14 @@ function renderTeams() {
             <div class="team-info-label">Dotación Policial</div>
             <div class="team-info-val">${team.officers || 'Sin asignar'}</div>
           </div>
-          ${team.phone ? `
+          ${(() => {
+            const _ph = (team.phones && team.phones.length) ? team.phones : (team.phone ? [team.phone] : []);
+            return _ph.length ? `
           <div style="grid-column: span 2; margin-top: 6px;">
-            <div class="team-info-label">Teléfono</div>
-            <div class="team-info-val">${escapeHtml(team.phone)}</div>
-          </div>` : ''}
+            <div class="team-info-label">Teléfono${_ph.length > 1 ? 's' : ''}</div>
+            <div class="team-info-val">${_ph.map(p => escapeHtml(p)).join(' · ')}</div>
+          </div>` : '';
+          })()}
           ${(Array.isArray(team.notes) ? team.notes.length > 0 : !!team.notes) ? `
           <div style="grid-column: span 2; margin-top: 6px; border-top: 1px dashed var(--border-color); padding-top: 6px;">
             <div class="team-info-label">Instrucciones Operativas</div>
@@ -991,10 +1008,14 @@ function renderTeams() {
           </div>` : ''}
         </div>
         <div class="team-actions">
-          ${team.phone ? `
-          <a href="tel:${escapeHtml(team.phone)}" class="btn btn-secondary btn-sm" style="flex: 1;">
-            📞 Llamar
-          </a>` : ''}
+          ${(() => {
+            const _ph = (team.phones && team.phones.length) ? team.phones : (team.phone ? [team.phone] : []);
+            return _ph.map(p =>
+              `<a href="tel:${escapeHtml(p)}" class="btn btn-secondary btn-sm" style="flex:1;">
+                📞 ${_ph.length > 1 ? escapeHtml(p) : 'Llamar'}
+              </a>`
+            ).join('');
+          })()}
           <button class="btn btn-sm" onclick="navigateTo(${lat}, ${lng})" style="flex: 1.5;">
             📍 Ruta GPS
           </button>
@@ -1061,7 +1082,7 @@ function renderEvents() {
           </div>
           <div class="timeline-card">
             <div class="timeline-title">${event.title}</div>
-            <div class="timeline-desc">${event.desc}</div>
+            <div class="timeline-desc">${formatDescripcion(event.desc)}</div>
             ${appState.isAdmin ? `
             <div class="admin-inline-actions">
               <button class="btn btn-sm btn-secondary" onclick="openEditEventModal('${event.id}')">Editar</button>
@@ -1563,6 +1584,9 @@ window.openAddTeamModal = function() {
   document.getElementById('form-team').reset();
   document.getElementById('team-id').value = '';
   document.getElementById('modal-team-title').textContent = 'Añadir Medio Aéreo / Equipo';
+  document.getElementById('team-phone-1').value = '';
+  document.getElementById('team-phone-2').value = '';
+  document.getElementById('team-phone-3').value = '';
   actualizarDisplayCoordsEquipo();
   attachTeamTypeListeners();
   renderNotesEditor([]);
@@ -1593,7 +1617,12 @@ window.openEditTeamModal = function(id) {
     : '';
   actualizarDisplayCoordsEquipo();
   document.getElementById('team-officers').value = team.officers || '';
-  document.getElementById('team-phone').value = team.phone || '';
+  const _phones = (team.phones && team.phones.length)
+    ? team.phones
+    : (team.phone ? [team.phone] : []);
+  document.getElementById('team-phone-1').value = _phones[0] || '';
+  document.getElementById('team-phone-2').value = _phones[1] || '';
+  document.getElementById('team-phone-3').value = _phones[2] || '';
   document.getElementById('team-freq').value = team.freq || '';
 
   document.getElementById('modal-team-title').textContent = 'Editar Medio Aéreo / Equipo';
@@ -1729,7 +1758,11 @@ window.saveTeam = function() {
     lat,
     lng,
     officers: document.getElementById('team-officers').value,
-    phone: document.getElementById('team-phone').value,
+    phones: [
+      document.getElementById('team-phone-1').value.trim(),
+      document.getElementById('team-phone-2').value.trim(),
+      document.getElementById('team-phone-3').value.trim()
+    ].filter(p => p),
     freq: document.getElementById('team-freq').value,
     notes: leerNotasEditor()
   };
