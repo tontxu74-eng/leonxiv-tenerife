@@ -951,16 +951,16 @@ function renderTeams() {
 
   // Filtrar
   const filtered = appState.teams.filter(team => {
-    const matchSearch = 
+    const matchSearch =
       team.callsign.toLowerCase().includes(searchQuery) ||
       team.sector.toLowerCase().includes(searchQuery) ||
       (team.officers && team.officers.toLowerCase().includes(searchQuery)) ||
       (team.freq && team.freq.toLowerCase().includes(searchQuery));
-    
+
     const matchType = filterType === 'todos' || (team.type || '').split(',').includes(filterType);
 
     return matchSearch && matchType;
-  });
+  }).sort((a, b) => a.callsign.localeCompare(b.callsign, 'es'));
 
   if (filtered.length === 0) {
     container.innerHTML = `
@@ -1427,7 +1427,7 @@ function renderAdminLists() {
 
   // Equipos Admin
   if (adminTeams) {
-    adminTeams.innerHTML = appState.teams.map(team => `
+    adminTeams.innerHTML = [...appState.teams].sort((a, b) => a.callsign.localeCompare(b.callsign, 'es')).map(team => `
       <div class="admin-list-item">
         <div class="admin-list-item-info">
           <span class="admin-list-item-title">${team.callsign} (${team.type})</span>
