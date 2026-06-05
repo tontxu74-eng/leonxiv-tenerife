@@ -511,6 +511,14 @@ function initMap() {
     const lat = e.latlng.lat.toFixed(6);
     const lng = e.latlng.lng.toFixed(6);
 
+    // Modo envío de ubicación por WhatsApp/SMS
+    const sendLocBanner = document.getElementById('send-location-banner');
+    if (sendLocBanner && sendLocBanner.style.display === 'flex') {
+      sendLocBanner.style.display = 'none';
+      abrirModalEnvioUbicacion(lat, lng);
+      return;
+    }
+
     // Modo selección de posición de equipo
     const teamBanner = document.getElementById('team-pick-banner');
     if (teamBanner && teamBanner.style.display === 'flex') {
@@ -736,8 +744,9 @@ function updateMapMarkers() {
     });
 
     if (appState.mapMarkers[team.id]) {
-      // Actualizar posición y contenido de popup si el marcador ya existe
+      // Actualizar posición, icono y contenido de popup si el marcador ya existe
       appState.mapMarkers[team.id].setLatLng([lat, lng]);
+      appState.mapMarkers[team.id].setIcon(customIcon);
       appState.mapMarkers[team.id].getPopup().setContent(popupContent);
     } else {
       // Crear nuevo marcador
@@ -1808,6 +1817,31 @@ window.saveTeam = function() {
 // --- RASTREO GPS PARA EQUIPOS MOVIL ---
 let activeWatchId = null;
 let activeTeamId = null;
+let activeWakeLock = null;
+let lastGpsWriteTime = 0;
+
+// Solicitar WakeLock para evitar que la pantalla se apague durante el rastreo
+async function requestScreenWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    if (activeWakeLock) activeWakeLock.release().catch(() => {});
+    activeWakeLock = await navigator.wakeLock.request('screen');
+  } catch (err) {
+    console.warn('WakeLock no disponible:', err.message);
+  }
+}
+
+// Detectar cuando la app va al segundo plano (pantalla bloqueada, cambio de app)
+// y re-solicitar WakeLock al volver al primer plano
+document.addEventListener('visibilitychange', () => {
+  if (activeWatchId === null) return;
+  if (document.visibilityState === 'hidden') {
+    showToast("⚠️ Rastreo GPS: mantén la pantalla encendida para no perder la señal.", "warning");
+  } else if (document.visibilityState === 'visible') {
+    // La pantalla volvió: re-solicitar WakeLock (se libera automáticamente al bloquear)
+    requestScreenWakeLock();
+  }
+});
 
 window.startGpsTracking = function(teamId) {
   const team = appState.teams.find(t => t.id === teamId);
@@ -1820,17 +1854,25 @@ window.startGpsTracking = function(teamId) {
   }
 
   activeTeamId = teamId;
+  lastGpsWriteTime = 0;
 
   if (!navigator.geolocation) {
     showToast("Geolocalización no disponible en este navegador", "danger");
     return;
   }
 
+  requestScreenWakeLock();
+
   activeWatchId = navigator.geolocation.watchPosition(
     pos => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       const now = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      // Throttle: no escribir en Firestore más de una vez cada 5 segundos para evitar saturación
+      const ahora = Date.now();
+      if (ahora - lastGpsWriteTime < 5000) return;
+      lastGpsWriteTime = ahora;
 
       // Actualizar en Firestore
       if (appState.firebaseEnabled) {
@@ -1856,18 +1898,21 @@ window.startGpsTracking = function(teamId) {
     },
     err => {
       console.error('Error GPS:', err);
+      // Solo detener el rastreo si el usuario deniega el permiso (código 1)
+      // Para timeout (código 3) o posición no disponible (código 2), watchPosition
+      // continúa automáticamente — no hay que hacer nada
       if (err.code === 1) {
         showToast("Permiso de geolocalización denegado. Actívalo en la configuración del navegador.", "danger");
-      } else {
-        showToast("Error al obtener la posición GPS: " + err.message, "danger");
+        navigator.geolocation.clearWatch(activeWatchId);
+        activeWatchId = null;
+        activeTeamId = null;
+        if (activeWakeLock) { activeWakeLock.release().catch(() => {}); activeWakeLock = null; }
       }
-      activeWatchId = null;
-      activeTeamId = null;
     },
     {
       enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 10000
+      maximumAge: 5000,  // Permitir posición cacheada de hasta 5 s para evitar timeouts
+      timeout: Infinity  // Sin límite: el navegador espera hasta obtener señal
     }
   );
 
@@ -1882,6 +1927,11 @@ window.stopGpsTracking = function(teamId) {
     navigator.geolocation.clearWatch(activeWatchId);
     activeWatchId = null;
     activeTeamId = null;
+  }
+
+  if (activeWakeLock) {
+    activeWakeLock.release().catch(() => {});
+    activeWakeLock = null;
   }
 
   // Actualizar en Firestore/Local
@@ -1901,6 +1951,107 @@ window.stopGpsTracking = function(teamId) {
   }
 
   showToast("Rastreo GPS detenido para " + team.callsign, "info");
+};
+
+// --- ENVÍO DE UBICACIÓN POR WHATSAPP / SMS ---
+
+window.activateSendLocationMode = function() {
+  const banner = document.getElementById('send-location-banner');
+  if (banner) banner.style.display = 'flex';
+};
+
+window.cancelSendLocationMode = function() {
+  const banner = document.getElementById('send-location-banner');
+  if (banner) banner.style.display = 'none';
+};
+
+window.abrirModalEnvioUbicacion = function(lat, lng) {
+  const modal = document.getElementById('modal-send-location');
+  modal.dataset.lat = lat;
+  modal.dataset.lng = lng;
+
+  document.getElementById('send-location-coords').textContent = `${lat}, ${lng}`;
+
+  // Poblar selector con equipos que tienen teléfono
+  const select = document.getElementById('send-location-team');
+  select.innerHTML = '<option value="">— Seleccionar equipo —</option>';
+  appState.teams.forEach(team => {
+    const phones = (team.phones && team.phones.length) ? team.phones : (team.phone ? [team.phone] : []);
+    if (phones.length > 0) {
+      const opt = document.createElement('option');
+      opt.value = team.id;
+      opt.textContent = `${team.callsign} — ${team.sector}`;
+      select.appendChild(opt);
+    }
+  });
+
+  document.getElementById('send-location-phone-group').style.display = 'none';
+  openModal('modal-send-location');
+};
+
+window.actualizarTelefonosEnvio = function() {
+  const teamId = document.getElementById('send-location-team').value;
+  const phoneGroup = document.getElementById('send-location-phone-group');
+  const phoneSelect = document.getElementById('send-location-phone');
+
+  if (!teamId) { phoneGroup.style.display = 'none'; return; }
+
+  const team = appState.teams.find(t => t.id === teamId);
+  const phones = (team.phones && team.phones.length) ? team.phones : (team.phone ? [team.phone] : []);
+
+  phoneSelect.innerHTML = '';
+  phones.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    phoneSelect.appendChild(opt);
+  });
+
+  // Mostrar el selector de número solo si hay más de uno
+  phoneGroup.style.display = phones.length > 1 ? 'block' : 'none';
+};
+
+function formatearNumeroWA(numero) {
+  let digits = numero.replace(/\D/g, '');
+  // Si tiene 9 dígitos y empieza por 6, 7, 8 o 9: número español sin prefijo
+  if (digits.length === 9 && /^[6789]/.test(digits)) digits = '34' + digits;
+  return digits;
+}
+
+function obtenerDatosEnvio() {
+  const modal = document.getElementById('modal-send-location');
+  const lat = modal.dataset.lat;
+  const lng = modal.dataset.lng;
+  const teamId = document.getElementById('send-location-team').value;
+
+  if (!teamId) { showToast("Selecciona un equipo de destino", "warning"); return null; }
+
+  const team = appState.teams.find(t => t.id === teamId);
+  const phones = (team.phones && team.phones.length) ? team.phones : (team.phone ? [team.phone] : []);
+  const phoneSelectEl = document.getElementById('send-location-phone');
+  const numero = phones.length > 1 ? phoneSelectEl.value : phones[0];
+
+  if (!numero) { showToast("Este equipo no tiene teléfono registrado", "warning"); return null; }
+
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const mensaje = `📍 Posición táctica recibida:\n${mapsUrl}\n\nPulsa el enlace para navegar al punto.`;
+
+  return { numero, mensaje };
+}
+
+window.enviarUbicacionWhatsApp = function() {
+  const datos = obtenerDatosEnvio();
+  if (!datos) return;
+  const numWA = formatearNumeroWA(datos.numero);
+  window.open(`https://wa.me/${numWA}?text=${encodeURIComponent(datos.mensaje)}`, '_blank');
+  closeModal('modal-send-location');
+};
+
+window.enviarUbicacionSMS = function() {
+  const datos = obtenerDatosEnvio();
+  if (!datos) return;
+  window.open(`sms:${datos.numero}?body=${encodeURIComponent(datos.mensaje)}`, '_blank');
+  closeModal('modal-send-location');
 };
 
 // --- OPERACIONES DE EVENTOS ---
