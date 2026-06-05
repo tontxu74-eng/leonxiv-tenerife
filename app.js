@@ -1715,6 +1715,11 @@ window.saveTeam = function() {
     }
     document.getElementById('team-lat').value = c.lat;
     document.getElementById('team-lng').value = c.lng;
+  } else {
+    // Si el campo visible está vacío, limpiar también los campos internos
+    // para que no se reutilicen coordenadas de una edición anterior
+    document.getElementById('team-lat').value = '';
+    document.getElementById('team-lng').value = '';
   }
 
   if (!form.reportValidity()) return;
@@ -1722,26 +1727,17 @@ window.saveTeam = function() {
   // Comprobar si es tipo MOVIL (exclusivo)
   const isMOVIL = document.getElementById('team-type-movil')?.checked;
 
+  // Las coordenadas son opcionales para todos los tipos:
+  // sin coordenadas → el equipo aparece en listados pero no en el mapa
   let lat = null, lng = null;
-  if (!isMOVIL) {
-    // Para tipos no-MOVIL, las coordenadas son obligatorias
+  const latStr = document.getElementById('team-lat').value.trim();
+  const lngStr = document.getElementById('team-lng').value.trim();
+  if (latStr && lngStr) {
     lat = normalizarInputCoordenada('team-lat');
     lng = normalizarInputCoordenada('team-lng');
     if (isNaN(lat) || isNaN(lng)) {
-      showToast("Formato de coordenadas no reconocido. Usa decimal (28.1003) o grados (28°6'1.4\"N).", "danger");
+      showToast("Formato de coordenadas no reconocido. Usa decimal (40.4898, -3.5918) o deja el campo vacío.", "danger");
       return;
-    }
-  } else {
-    // Para MOVIL, las coordenadas son opcionales (llegarán por GPS)
-    const latStr = document.getElementById('team-lat').value.trim();
-    const lngStr = document.getElementById('team-lng').value.trim();
-    if (latStr && lngStr) {
-      lat = normalizarInputCoordenada('team-lat');
-      lng = normalizarInputCoordenada('team-lng');
-      if (isNaN(lat) || isNaN(lng)) {
-        showToast("Formato de coordenadas no válido", "danger");
-        return;
-      }
     }
   }
 
