@@ -1460,3 +1460,61 @@ html {
   font-style: italic;
   white-space: pre-wrap;
 }
+
+/* --- BUSCADOR DE MAPA --- */
+.map-search-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(11, 15, 25, 0.92);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: 8px 12px;
+  width: min(360px, calc(100% - 80px));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.2s ease;
+}
+
+.map-search-bar.error {
+  border-color: hsl(var(--danger));
+}
+
+.map-search-icon-svg {
+  flex-shrink: 0;
+  color: hsl(var(--text-muted));
+}
+
+.map-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: hsl(var(--text-primary));
+  font-size: 0.875rem;
+  font-family: var(--font-family);
+  min-width: 0;
+}
+
+.map-search-input::placeholder {
+  color: hsl(var(--text-muted));
+}
+
+@keyframes map-search-spin {
+  to { transform: rotate(360deg); }
+}
+
+.map-search-spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid hsla(210, 40%, 98%, 0.2);
+  border-top-color: hsl(var(--text-primary));
+  border-radius: 50%;
+  animation: map-search-spin 0.7s linear infinite;
+}

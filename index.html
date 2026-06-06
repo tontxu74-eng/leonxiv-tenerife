@@ -126,6 +126,20 @@
       <section id="map-tab" class="tab-view">
         <div class="map-container-wrapper">
           <div id="map"></div>
+          <!-- Buscador de direcciones y coordenadas -->
+          <div class="map-search-bar" id="map-search-bar">
+            <svg id="map-search-icon" class="map-search-icon-svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <div id="map-search-spinner" class="map-search-spinner" style="display:none;"></div>
+            <input
+              type="text"
+              id="map-search-input"
+              class="map-search-input"
+              placeholder="Buscar dirección o coordenadas (lat, lng)…"
+              onkeydown="if(event.key==='Enter') buscarEnMapa()"
+            >
+          </div>
           <!-- Panel Flotante Informativo en el Mapa -->
           <div class="map-overlay-panel">
             <div class="tactical-info-box">

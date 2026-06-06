@@ -506,6 +506,9 @@ function initMap() {
   updateMapMarkers();
   updateMapOverlays();
 
+  // Eliminar marcador de búsqueda al hacer clic en el mapa
+  appState.map.on('click', _eliminarSearchMarker);
+
   // Escuchar clicks en el mapa para capturar coordenadas de manera intuitiva
   appState.map.on('click', (e) => {
     const lat = e.latlng.lat.toFixed(6);
@@ -1956,6 +1959,102 @@ window.stopGpsTracking = function(teamId) {
   }
 
   showToast("Rastreo GPS detenido para " + team.callsign, "info");
+};
+
+// --- BUSCADOR DE MAPA (NOMINATIM) ---
+let searchMarker = null;
+
+// Elimina el marcador de búsqueda temporal del mapa
+function _eliminarSearchMarker() {
+  if (searchMarker && appState.map) {
+    appState.map.removeLayer(searchMarker);
+    searchMarker = null;
+  }
+}
+
+// Gestiona el estado visual de la barra de búsqueda
+function _searchSetState(estado, mensaje) {
+  const bar = document.getElementById('map-search-bar');
+  const icon = document.getElementById('map-search-icon');
+  const spinner = document.getElementById('map-search-spinner');
+  if (!bar) return;
+
+  bar.classList.remove('loading', 'error');
+  icon.style.display = 'block';
+  spinner.style.display = 'none';
+
+  if (estado === 'loading') {
+    icon.style.display = 'none';
+    spinner.style.display = 'block';
+  } else if (estado === 'error') {
+    bar.classList.add('error');
+    const input = document.getElementById('map-search-input');
+    input.value = '';
+    input.placeholder = mensaje || 'No encontrado';
+    setTimeout(() => {
+      bar.classList.remove('error');
+      input.placeholder = 'Buscar dirección o coordenadas (lat, lng)…';
+    }, 2000);
+  }
+}
+
+// Muestra el resultado de búsqueda: marcador temporal + flyTo
+function _mostrarResultadoBusqueda(lat, lng, nombre) {
+  _eliminarSearchMarker();
+
+  const icono = L.divIcon({
+    html: `<div style="font-size:1.5rem;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8));">📍</div>`,
+    className: '',
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -26]
+  });
+
+  searchMarker = L.marker([lat, lng], { icon: icono })
+    .addTo(appState.map)
+    .bindPopup(`<div style="font-size:0.85rem;max-width:240px;word-break:break-word;">${nombre}</div>`)
+    .openPopup();
+
+  appState.map.flyTo([lat, lng], 16, { duration: 1.2 });
+  // Registrar movestart DESPUÉS de que termine flyTo para no borrar el marcador durante la animación
+  appState.map.once('moveend', () => {
+    appState.map.once('movestart', _eliminarSearchMarker);
+  });
+  document.getElementById('map-search-input').value = '';
+}
+
+// Función principal: detecta coordenadas o llama a Nominatim
+window.buscarEnMapa = async function() {
+  if (!appState.map) return;
+  const input = document.getElementById('map-search-input');
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  // Detectar coordenadas: "28.1004, -15.4568" o "28.1004 -15.4568"
+  const coordMatch = texto.match(/^(-?\d+\.?\d*)\s*[,\s]\s*(-?\d+\.?\d*)$/);
+  if (coordMatch) {
+    _mostrarResultadoBusqueda(parseFloat(coordMatch[1]), parseFloat(coordMatch[2]), `📍 ${texto}`);
+    return;
+  }
+
+  // Buscar en Nominatim
+  _searchSetState('loading');
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(texto)}&format=json&limit=1&accept-language=es`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('red');
+    const data = await res.json();
+    _searchSetState('idle');
+    if (!data.length) {
+      _searchSetState('error', 'No encontrado');
+      return;
+    }
+    const { lat, lon, display_name } = data[0];
+    const nombre = display_name.length > 80 ? display_name.substring(0, 77) + '…' : display_name;
+    _mostrarResultadoBusqueda(parseFloat(lat), parseFloat(lon), nombre);
+  } catch {
+    _searchSetState('error', 'Error de red');
+  }
 };
 
 // --- ENVÍO DE UBICACIÓN POR WHATSAPP / SMS ---
