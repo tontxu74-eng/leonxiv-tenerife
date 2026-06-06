@@ -747,7 +747,7 @@ function updateMapMarkers() {
       // Actualizar posición, icono y contenido de popup si el marcador ya existe
       appState.mapMarkers[team.id].setLatLng([lat, lng]);
       appState.mapMarkers[team.id].setIcon(customIcon);
-      appState.mapMarkers[team.id].getPopup().setContent(popupContent);
+      appState.mapMarkers[team.id].getPopup()?.setContent(popupContent);
     } else {
       // Crear nuevo marcador
       const marker = L.marker([lat, lng], { icon: customIcon })
@@ -1830,12 +1830,21 @@ async function requestScreenWakeLock() {
 // Detectar cuando la app va al segundo plano (pantalla bloqueada, cambio de app)
 // y re-solicitar WakeLock al volver al primer plano
 document.addEventListener('visibilitychange', () => {
-  if (activeWatchId === null) return;
-  if (document.visibilityState === 'hidden') {
-    showToast("⚠️ Rastreo GPS: mantén la pantalla encendida para no perder la señal.", "warning");
-  } else if (document.visibilityState === 'visible') {
-    // La pantalla volvió: re-solicitar WakeLock (se libera automáticamente al bloquear)
-    requestScreenWakeLock();
+  // Lógica para el emisor GPS
+  if (activeWatchId !== null) {
+    if (document.visibilityState === 'hidden') {
+      showToast("⚠️ Rastreo GPS: mantén la pantalla encendida para no perder la señal.", "warning");
+    } else if (document.visibilityState === 'visible') {
+      requestScreenWakeLock();
+    }
+  }
+
+  // Lógica para el coordinador: re-activar Firestore al volver a primer plano.
+  // Los navegadores móviles pausan la conexión WebSocket cuando la pestaña va al
+  // segundo plano; al volver, enableNetwork() la restablece y los onSnapshot
+  // se ponen al día automáticamente con los cambios perdidos.
+  if (document.visibilityState === 'visible' && appState.firebaseEnabled && appState.db) {
+    appState.db.enableNetwork().catch(() => {});
   }
 });
 
