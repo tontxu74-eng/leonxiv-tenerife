@@ -506,9 +506,6 @@ function initMap() {
   updateMapMarkers();
   updateMapOverlays();
 
-  // Eliminar marcador de búsqueda al hacer clic en el mapa
-  appState.map.on('click', _eliminarSearchMarker);
-
   // Escuchar clicks en el mapa para capturar coordenadas de manera intuitiva
   appState.map.on('click', (e) => {
     const lat = e.latlng.lat.toFixed(6);
@@ -1963,9 +1960,16 @@ window.stopGpsTracking = function(teamId) {
 
 // --- BUSCADOR DE MAPA (NOMINATIM) ---
 let searchMarker = null;
+let searchMarkerTimer = null;
 
-// Elimina el marcador de búsqueda temporal del mapa
+// Elimina el marcador de búsqueda temporal del mapa.
+// Solo se invoca por: nueva búsqueda o expiración de searchMarkerTimer (60s).
+// A propósito, mover/zoom/clic en el mapa YA NO lo eliminan — el marcador debe persistir.
 function _eliminarSearchMarker() {
+  if (searchMarkerTimer) {
+    clearTimeout(searchMarkerTimer);
+    searchMarkerTimer = null;
+  }
   if (searchMarker && appState.map) {
     appState.map.removeLayer(searchMarker);
     searchMarker = null;
@@ -2016,10 +2020,7 @@ function _mostrarResultadoBusqueda(lat, lng, nombre) {
     .openPopup();
 
   appState.map.flyTo([lat, lng], 16, { duration: 1.2 });
-  // Registrar movestart DESPUÉS de que termine flyTo para no borrar el marcador durante la animación
-  appState.map.once('moveend', () => {
-    appState.map.once('movestart', _eliminarSearchMarker);
-  });
+  searchMarkerTimer = setTimeout(_eliminarSearchMarker, 60000);
   document.getElementById('map-search-input').value = '';
 }
 
