@@ -600,7 +600,7 @@ function notasCardHtml(notes) {
         : '—';
       return `<div style="border-left:3px solid ${color};padding:4px 7px;border-radius:3px;background:${color}18;margin-bottom:3px;">` +
         `<div style="color:${color};font-size:0.8rem;font-weight:bold;">📅 ${fechaStr}</div>` +
-        `<div style="font-size:0.85rem;color:var(--text-secondary);margin-top:1px;">${escapeHtml(n.texto || '')}</div></div>`;
+        `<div style="font-size:0.85rem;color:var(--text-secondary);margin-top:1px;white-space:pre-line;">${escapeHtml(n.texto || '')}</div></div>`;
     }).join('');
   }
   if (typeof notes === 'string' && notes.trim()) {
