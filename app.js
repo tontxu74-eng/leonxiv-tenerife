@@ -621,10 +621,10 @@ function evolutionsCardHtml(team, allTeams) {
   const salidas = (Array.isArray(team.evolutions) ? team.evolutions : []).map(evo => {
     const destino = allTeams.find(t => t.id === evo.destino);
     const nombreDestino = destino ? escapeHtml(destino.callsign) : '[Equipo eliminado]';
-    return `<div class="evolution-card-block evolution-card-block--out">
+    return { evo, html: `<div class="evolution-card-block evolution-card-block--out">
       <div class="evolution-card-block__title">🔜 ${formatearFechaHora(evo)} → Evoluciona a ${nombreDestino}</div>
       <div class="evolution-card-block__agents">${formatearQuien(evo)}</div>
-    </div>`;
+    </div>` };
   });
 
   const llegadas = allTeams
@@ -633,15 +633,18 @@ function evolutionsCardHtml(team, allTeams) {
       .filter(evo => evo.destino === team.id)
       .map(evo => ({ evo, origen }))
     )
-    // Mismo criterio de orden cronológico que leerEvolutionsEditor (fecha+hora),
-    // necesario porque las llegadas proceden de varios equipos y no vienen pre-ordenadas entre sí
-    .sort((a, b) => (a.evo.fecha + a.evo.hora).localeCompare(b.evo.fecha + b.evo.hora))
-    .map(({ evo, origen }) => `<div class="evolution-card-block evolution-card-block--in">
+    .map(({ evo, origen }) => ({ evo, html: `<div class="evolution-card-block evolution-card-block--in">
         <div class="evolution-card-block__title">🔄 ${formatearFechaHora(evo)} ← Recibe de ${escapeHtml(origen.callsign)}</div>
         <div class="evolution-card-block__agents">${formatearQuien(evo)}</div>
-      </div>`);
+      </div>` }));
 
-  return [...salidas, ...llegadas].join('');
+  // Salidas y llegadas se fusionan en una única línea temporal: el usuario
+  // necesita ver todos los movimientos del punto (entrantes y salientes)
+  // ordenados por fecha+hora, no agrupados por tipo
+  return [...salidas, ...llegadas]
+    .sort((a, b) => (a.evo.fecha + a.evo.hora).localeCompare(b.evo.fecha + b.evo.hora))
+    .map(({ html }) => html)
+    .join('');
 }
 
 function escapeHtml(str) {
