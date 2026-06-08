@@ -1461,6 +1461,130 @@ html {
   white-space: pre-wrap;
 }
 
+.evolution-block {
+  border: 1px solid #2a3a4a;
+  border-left-width: 3px;
+  border-left-color: #00b4d8;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+}
+
+.evolution-block__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.evolution-date,
+.evolution-time,
+.evolution-destino {
+  flex: 1;
+  background: transparent;
+  border: 1px solid #3a5a6a;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 0.85rem;
+  color: inherit;
+}
+
+.evolution-remove {
+  background: none;
+  border: none;
+  color: hsl(var(--danger));
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+.evolution-remove:hover { opacity: 1; }
+
+.evolution-block__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.evolution-label {
+  font-size: 0.8rem;
+  color: hsl(var(--text-muted));
+}
+
+.evolution-mode-option {
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.evolution-agents {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0 0 4px;
+}
+
+.evolution-agent-checkbox {
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.evolution-empty-msg {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.btn-add-evolution {
+  width: 100%;
+  background: transparent;
+  border: 1px dashed #00b4d8;
+  color: #00b4d8;
+  border-radius: 6px;
+  padding: 7px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-top: 2px;
+}
+.btn-add-evolution:hover { background: rgba(0,180,216,0.08); }
+
+.evolution-card-block {
+  border-left: 3px solid;
+  padding: 4px 7px;
+  border-radius: 3px;
+  margin-bottom: 3px;
+}
+
+.evolution-card-block--out {
+  border-left-color: #4caf50;
+  background: #4caf5018;
+}
+
+.evolution-card-block--in {
+  border-left-color: #00b4d8;
+  background: #00b4d818;
+}
+
+.evolution-card-block__title {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.evolution-card-block__agents {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
 /* --- BUSCADOR DE MAPA --- */
 .map-search-bar {
   position: absolute;
