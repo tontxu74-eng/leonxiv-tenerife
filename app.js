@@ -631,11 +631,15 @@ function evolutionsCardHtml(team, allTeams) {
     .filter(origen => origen.id !== team.id)
     .flatMap(origen => (Array.isArray(origen.evolutions) ? origen.evolutions : [])
       .filter(evo => evo.destino === team.id)
-      .map(evo => `<div class="evolution-card-block evolution-card-block--in">
+      .map(evo => ({ evo, origen }))
+    )
+    // Mismo criterio de orden cronológico que leerEvolutionsEditor (fecha+hora),
+    // necesario porque las llegadas proceden de varios equipos y no vienen pre-ordenadas entre sí
+    .sort((a, b) => (a.evo.fecha + a.evo.hora).localeCompare(b.evo.fecha + b.evo.hora))
+    .map(({ evo, origen }) => `<div class="evolution-card-block evolution-card-block--in">
         <div class="evolution-card-block__title">🔄 ${formatearFechaHora(evo)} ← Recibe de ${escapeHtml(origen.callsign)}</div>
         <div class="evolution-card-block__agents">${formatearQuien(evo)}</div>
-      </div>`)
-    );
+      </div>`);
 
   return [...salidas, ...llegadas].join('');
 }
@@ -741,7 +745,7 @@ function updateMapMarkers() {
         </div>
         <div class="map-popup-body">
           <strong>Sector:</strong> ${team.sector}<br>
-          ${team.officers ? `<strong>Dotación:</strong> ${team.officers}<br>` : ''}
+          ${team.officers ? `<strong>Dotación:</strong> ${escapeHtml(team.officers).replace(/\r?\n/g, '<br>')}<br>` : ''}
           ${telefonosPopupHtml(team)}
           <strong>Radio:</strong> ${team.freq || 'Sin asignar'}<br>
           ${primerTipo === 'MOVIL' && team.lastGpsUpdate ? `<div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border-color); font-size: 0.85rem; color: #4caf50;">📡 Última pos. GPS: ${team.lastGpsUpdate}</div>` : ''}
