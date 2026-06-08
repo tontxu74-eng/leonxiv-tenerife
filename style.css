@@ -1540,7 +1540,7 @@ html {
 .evolution-empty-msg {
   font-size: 0.8rem;
   font-style: italic;
-  color: var(--text-secondary);
+  color: hsl(var(--text-secondary));
 }
 
 .btn-add-evolution {
@@ -1576,12 +1576,12 @@ html {
 .evolution-card-block__title {
   font-size: 0.8rem;
   font-weight: bold;
-  color: var(--text-primary);
+  color: hsl(var(--text-primary));
 }
 
 .evolution-card-block__agents {
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: hsl(var(--text-secondary));
   margin-top: 1px;
 }
 
