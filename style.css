@@ -1496,6 +1496,14 @@ html {
   color: inherit;
 }
 
+/* El <select> necesita fondo y color explícitos (no "transparent"/"inherit"):
+   el navegador pinta el listado desplegado con estos valores, y si quedan
+   transparentes usa su blanco por defecto, dejando el texto claro ilegible */
+.evolution-destino {
+  background: hsl(var(--bg-dark));
+  color: #fff;
+}
+
 .evolution-remove {
   background: none;
   border: none;
