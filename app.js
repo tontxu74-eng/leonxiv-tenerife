@@ -606,6 +606,40 @@ function notasCardHtml(notes) {
   return '';
 }
 
+function evolutionsCardHtml(team, allTeams) {
+  const formatearFechaHora = (evo) => {
+    const fechaStr = evo.fecha
+      ? new Date(evo.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+      : '—';
+    return `${fechaStr} · ${escapeHtml(evo.hora || '—')}`;
+  };
+  const formatearQuien = (evo) =>
+    (evo.modo === 'parcial' && Array.isArray(evo.agentes) && evo.agentes.length)
+      ? escapeHtml(evo.agentes.join(', '))
+      : 'Todo el equipo';
+
+  const salidas = (Array.isArray(team.evolutions) ? team.evolutions : []).map(evo => {
+    const destino = allTeams.find(t => t.id === evo.destino);
+    const nombreDestino = destino ? escapeHtml(destino.callsign) : '[Equipo eliminado]';
+    return `<div class="evolution-card-block evolution-card-block--out">
+      <div class="evolution-card-block__title">🔜 ${formatearFechaHora(evo)} → Evoluciona a ${nombreDestino}</div>
+      <div class="evolution-card-block__agents">${formatearQuien(evo)}</div>
+    </div>`;
+  });
+
+  const llegadas = allTeams
+    .filter(origen => origen.id !== team.id)
+    .flatMap(origen => (Array.isArray(origen.evolutions) ? origen.evolutions : [])
+      .filter(evo => evo.destino === team.id)
+      .map(evo => `<div class="evolution-card-block evolution-card-block--in">
+        <div class="evolution-card-block__title">🔄 ${formatearFechaHora(evo)} ← Recibe de ${escapeHtml(origen.callsign)}</div>
+        <div class="evolution-card-block__agents">${formatearQuien(evo)}</div>
+      </div>`)
+    );
+
+  return [...salidas, ...llegadas].join('');
+}
+
 function escapeHtml(str) {
   return str
     .replace(/&/g, '&amp;')
@@ -1015,6 +1049,14 @@ function renderTeams() {
             <div class="team-info-label">Instrucciones Operativas</div>
             ${notasCardHtml(team.notes)}
           </div>` : ''}
+          ${(() => {
+            const _evoHtml = evolutionsCardHtml(team, appState.teams);
+            return _evoHtml ? `
+          <div style="grid-column: span 2; margin-top: 6px; border-top: 1px dashed var(--border-color); padding-top: 6px;">
+            <div class="team-info-label">Movimientos planificados</div>
+            ${_evoHtml}
+          </div>` : '';
+          })()}
         </div>
         <div class="team-actions">
           ${(() => {
