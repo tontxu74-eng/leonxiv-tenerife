@@ -1199,6 +1199,12 @@ html {
   margin: auto;
 }
 
+/* El modal de equipo es más ancho para que las secciones de Instrucciones
+   Operativas y Evoluciones quepan lado a lado, reduciendo el scroll vertical */
+#modal-team .modal-content {
+  max-width: 1050px;
+}
+
 @keyframes modalSlide {
   from { transform: scale(0.9) translateY(20px); opacity: 0; }
   to { transform: scale(1) translateY(0); opacity: 1; }
