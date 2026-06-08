@@ -1000,7 +1000,7 @@ function renderTeams() {
           </div>
           <div style="grid-column: span 2; margin-top: 6px;">
             <div class="team-info-label">Dotación Policial</div>
-            <div class="team-info-val">${team.officers || 'Sin asignar'}</div>
+            <div class="team-info-val" style="white-space:pre-line;">${team.officers ? escapeHtml(team.officers) : 'Sin asignar'}</div>
           </div>
           ${(() => {
             const _ph = (team.phones && team.phones.length) ? team.phones : (team.phone ? [team.phone] : []);
