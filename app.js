@@ -1897,7 +1897,8 @@ window.saveTeam = function() {
       document.getElementById('team-phone-3').value.trim()
     ].filter(p => p),
     freq: document.getElementById('team-freq').value,
-    notes: leerNotasEditor()
+    notes: leerNotasEditor(),
+    evolutions: leerEvolutionsEditor()
   };
 
   // Inicializar campos de rastreo GPS para equipos MOVIL
