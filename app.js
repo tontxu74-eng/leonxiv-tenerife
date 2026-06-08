@@ -1694,6 +1694,24 @@ window.removeEvolutionBlock = function(idx) {
   renderEvolutionsEditor(current, teamId);
 };
 
+// Cuando el usuario edita el campo "Agentes asignados" con el modal de evoluciones abierto,
+// hay que regenerar los checkboxes para que reflejen la lista actualizada de agentes,
+// conservando las marcas de los nombres que sigan existiendo.
+function handleOfficersChangeForEvolutions() {
+  const container = document.getElementById('team-evolutions-editor');
+  if (!container || !container.querySelector('.evolution-block')) return;
+  const teamId = document.getElementById('team-id').value;
+  const current = leerEvolutionsEditor();
+  renderEvolutionsEditor(current, teamId);
+}
+
+function attachOfficersEvolutionsListener() {
+  const officersField = document.getElementById('team-officers');
+  if (!officersField) return;
+  officersField.removeEventListener('input', handleOfficersChangeForEvolutions);
+  officersField.addEventListener('input', handleOfficersChangeForEvolutions);
+}
+
 // --- OPERACIONES DE EQUIPOS ---
 window.openAddTeamModal = function() {
   document.getElementById('form-team').reset();
@@ -1706,6 +1724,7 @@ window.openAddTeamModal = function() {
   attachTeamTypeListeners();
   renderNotesEditor([]);
   renderEvolutionsEditor([], '');
+  attachOfficersEvolutionsListener();
   openModal('modal-team');
 };
 
@@ -1745,6 +1764,7 @@ window.openEditTeamModal = function(id) {
   attachTeamTypeListeners();
   renderNotesEditor(team.notes || []);
   renderEvolutionsEditor(team.evolutions || [], team.id);
+  attachOfficersEvolutionsListener();
   openModal('modal-team');
 };
 
