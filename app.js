@@ -1588,6 +1588,112 @@ window.removeNotasDia = function(idx) {
   renderNotesEditor(current);
 };
 
+// --- EDITOR DE EVOLUCIONES A OTROS PUNTOS ---
+function renderEvolutionsEditor(evolutions, currentTeamId) {
+  const container = document.getElementById('team-evolutions-editor');
+  if (!container) return;
+
+  const destinos = appState.teams.filter(t => t.id !== currentTeamId);
+  const lineasAgentes = (document.getElementById('team-officers').value || '')
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l);
+
+  if (destinos.length === 0) {
+    container.innerHTML = `<div class="evolution-empty-msg">No hay otros equipos disponibles como destino. Crea otro equipo primero para poder planificar evoluciones.</div>`;
+    return;
+  }
+
+  let html = '';
+  const entries = Array.isArray(evolutions) ? evolutions : [];
+  entries.forEach((evo, i) => {
+    const modo = evo.modo === 'parcial' ? 'parcial' : 'completo';
+    const agentesSeleccionados = Array.isArray(evo.agentes) ? evo.agentes : [];
+    const opcionesDestino = destinos.map(t =>
+      `<option value="${t.id}" ${t.id === evo.destino ? 'selected' : ''}>${escapeHtml(t.callsign)}</option>`
+    ).join('');
+    const checkboxesAgentes = lineasAgentes.length
+      ? lineasAgentes.map(nombre =>
+          `<label class="evolution-agent-checkbox">
+            <input type="checkbox" value="${escapeHtml(nombre)}" ${agentesSeleccionados.includes(nombre) ? 'checked' : ''}>
+            ${escapeHtml(nombre)}
+          </label>`
+        ).join('')
+      : `<div class="evolution-empty-msg">Escribe agentes en "Agentes asignados" para poder marcarlos aquí.</div>`;
+
+    html += `<div class="evolution-block" data-index="${i}">
+      <div class="evolution-block__header">
+        <input type="date" class="evolution-date" value="${evo.fecha || ''}">
+        <input type="time" class="evolution-time" value="${evo.hora || ''}">
+        <button type="button" class="evolution-remove" onclick="removeEvolutionBlock(${i})">✕</button>
+      </div>
+      <div class="evolution-block__row">
+        <label class="evolution-label">Destino</label>
+        <select class="evolution-destino">${opcionesDestino}</select>
+      </div>
+      <div class="evolution-block__row">
+        <label class="evolution-mode-option">
+          <input type="radio" name="evolution-mode-${i}" class="evolution-mode" value="completo" ${modo === 'completo' ? 'checked' : ''}> Todo el equipo
+        </label>
+        <label class="evolution-mode-option">
+          <input type="radio" name="evolution-mode-${i}" class="evolution-mode" value="parcial" ${modo === 'parcial' ? 'checked' : ''} ${lineasAgentes.length === 0 ? 'disabled' : ''}> Agentes concretos
+        </label>
+      </div>
+      <div class="evolution-agents" style="display:${modo === 'parcial' ? 'flex' : 'none'};">
+        ${checkboxesAgentes}
+      </div>
+    </div>`;
+  });
+
+  html += `<button type="button" class="btn-add-evolution" onclick="addEvolutionBlock()">+ Añadir evolución</button>`;
+  container.innerHTML = html;
+
+  // Mostrar/ocultar la lista de agentes según el modo elegido en cada bloque
+  container.querySelectorAll('.evolution-block').forEach(block => {
+    block.querySelectorAll('.evolution-mode').forEach(radio => {
+      radio.addEventListener('change', () => {
+        const agentsDiv = block.querySelector('.evolution-agents');
+        const esParcial = block.querySelector('.evolution-mode[value="parcial"]').checked;
+        agentsDiv.style.display = esParcial ? 'flex' : 'none';
+      });
+    });
+  });
+}
+
+function leerEvolutionsEditor() {
+  const blocks = document.querySelectorAll('#team-evolutions-editor .evolution-block');
+  return Array.from(blocks)
+    .map(block => {
+      const modo = block.querySelector('.evolution-mode[value="parcial"]').checked ? 'parcial' : 'completo';
+      const agentes = modo === 'parcial'
+        ? Array.from(block.querySelectorAll('.evolution-agents input[type="checkbox"]:checked')).map(cb => cb.value)
+        : [];
+      return {
+        fecha: block.querySelector('.evolution-date').value,
+        hora: block.querySelector('.evolution-time').value,
+        destino: block.querySelector('.evolution-destino').value,
+        modo,
+        agentes
+      };
+    })
+    .filter(e => e.fecha || e.hora)
+    .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+}
+
+window.addEvolutionBlock = function() {
+  const teamId = document.getElementById('team-id').value;
+  const current = leerEvolutionsEditor();
+  current.push({ fecha: '', hora: '', destino: '', modo: 'completo', agentes: [] });
+  renderEvolutionsEditor(current, teamId);
+};
+
+window.removeEvolutionBlock = function(idx) {
+  const teamId = document.getElementById('team-id').value;
+  const current = leerEvolutionsEditor();
+  current.splice(idx, 1);
+  renderEvolutionsEditor(current, teamId);
+};
+
 // --- OPERACIONES DE EQUIPOS ---
 window.openAddTeamModal = function() {
   document.getElementById('form-team').reset();
@@ -1599,6 +1705,7 @@ window.openAddTeamModal = function() {
   actualizarDisplayCoordsEquipo();
   attachTeamTypeListeners();
   renderNotesEditor([]);
+  renderEvolutionsEditor([], '');
   openModal('modal-team');
 };
 
@@ -1637,6 +1744,7 @@ window.openEditTeamModal = function(id) {
   document.getElementById('modal-team-title').textContent = 'Editar Medio Aéreo / Equipo';
   attachTeamTypeListeners();
   renderNotesEditor(team.notes || []);
+  renderEvolutionsEditor(team.evolutions || [], team.id);
   openModal('modal-team');
 };
 
